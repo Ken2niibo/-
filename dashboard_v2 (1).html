@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>資産ダッシュボード</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="資産管理">
+<meta name="theme-color" content="#080c14">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c14;--s1:#0f1623;--s2:#141d2e;--bd:#1a2540;--ac:#00d4ff;--ac2:#7c3aed;--g:#10b981;--r:#ef4444;--y:#f59e0b;--t:#e2e8f0;--td:#64748b;--tb:#f8fafc;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--t);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 14px 50px;}
+header{padding:18px 14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--bd);margin-bottom:20px;position:relative;z-index:1;}
+.logo{font-family:'Space Mono',monospace;font-size:1rem;color:var(--ac);letter-spacing:.1em;}
+.logo span{color:var(--td);}
+.hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:20px;padding:4px 12px;font-size:.72rem;color:var(--g);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--g);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.upd-time{font-size:.72rem;color:var(--td);font-family:'Space Mono',monospace;}
+.refresh-btn{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:var(--ac);padding:5px 12px;border-radius:7px;cursor:pointer;font-size:.72rem;font-family:'Space Mono',monospace;transition:all .2s;}
+.refresh-btn:hover{background:rgba(0,212,255,.2);}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:11px;margin-bottom:16px;}
+.kpi{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:17px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.kpi:hover{transform:translateY(-2px);border-color:rgba(0,212,255,.3);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ac),var(--ac2));}
+.kpi-l{font-size:.68rem;color:var(--td);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
+.kpi-v{font-family:'Space Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--tb);}
+.kpi-s{font-size:.72rem;margin-top:4px;}
+.pos{color:var(--g);}.neg{color:var(--r);}.neu{color:var(--td);}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:18px;transition:border-color .2s;margin-bottom:14px;}
+.card:hover{border-color:rgba(0,212,255,.18);}
+.card-title{font-size:.72rem;color:var(--td);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.card-title::before{content:'';width:3px;height:13px;background:var(--ac);border-radius:2px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.chart-h{position:relative;height:300px;}
+.chart-hs{position:relative;height:240px;}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+.period-tabs{display:flex;gap:5px;margin-bottom:13px;flex-wrap:wrap;}
+.ptab{padding:4px 12px;border-radius:6px;font-size:.72rem;border:1px solid var(--bd);background:transparent;color:var(--td);cursor:pointer;transition:all .2s;font-family:'Space Mono',monospace;}
+.ptab:hover{border-color:var(--ac);color:var(--ac);}
+.ptab.active{background:var(--ac);border-color:var(--ac);color:#000;font-weight:700;}
+.alloc-wrap{display:flex;align-items:center;gap:18px;}
+.alloc-cw{width:150px;height:150px;flex-shrink:0;}
+.alloc-legend{flex:1;}
+.leg-item{display:flex;align-items:center;gap:7px;margin-bottom:7px;font-size:.78rem;}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.leg-pct{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--td);margin-left:auto;}
+.br-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.br-lbl{font-size:.75rem;color:var(--t);min-width:80px;}
+.br-bar{flex:1;height:7px;background:var(--bd);border-radius:4px;overflow:hidden;}
+.br-fill{height:100%;border-radius:4px;transition:width 1s ease;}
+.br-val{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--td);min-width:75px;text-align:right;}
+.stk-tbl{width:100%;border-collapse:collapse;font-size:.78rem;}
+.stk-tbl th{text-align:left;padding:7px 10px;color:var(--td);font-weight:500;font-size:.67rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--bd);}
+.stk-tbl th:not(:first-child){text-align:right;}
+.stk-tbl td{padding:9px 10px;border-bottom:1px solid rgba(26,37,64,.6);}
+.stk-tbl td:not(:first-child){text-align:right;font-family:'Space Mono',monospace;font-size:.75rem;}
+.stk-tbl tr:hover td{background:rgba(0,212,255,.03);}
+.stk-name{font-weight:500;color:var(--tb);}
+.stk-code{font-size:.65rem;color:var(--td);}
+.live-price{color:var(--ac);}
+.pnl-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:.68rem;}
+.pnl-badge.pos{background:rgba(16,185,129,.15);color:var(--g);}
+.pnl-badge.neg{background:rgba(239,68,68,.15);color:var(--r);}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.hist-tbl{width:100%;border-collapse:collapse;font-size:.75rem;}
+.hist-tbl th{padding:6px 9px;color:var(--td);font-weight:400;font-size:.67rem;text-transform:uppercase;border-bottom:1px solid var(--bd);text-align:right;}
+.hist-tbl th:first-child{text-align:left;}
+.hist-tbl td{padding:7px 9px;border-bottom:1px solid rgba(26,37,64,.5);text-align:right;font-family:'Space Mono',monospace;font-size:.72rem;}
+.hist-tbl td:first-child{text-align:left;color:var(--td);font-family:'Noto Sans JP',sans-serif;}
+.hist-tbl tr:hover td{background:rgba(0,212,255,.03);}
+.mom-section{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.mom-chip{padding:3px 9px;border-radius:5px;font-size:.68rem;font-family:'Space Mono',monospace;}
+.mom-chip.pos{background:rgba(16,185,129,.1);color:var(--g);border:1px solid rgba(16,185,129,.2);}
+.mom-chip.neg{background:rgba(239,68,68,.1);color:var(--r);border:1px solid rgba(239,68,68,.2);}
+.top-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:13px;}
+/* AI Chat */
+.ai-msg{padding:10px 12px;border-radius:10px;font-size:.8rem;line-height:1.6;max-width:92%;word-break:break-word;}
+.ai-msg.ai{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);align-self:flex-start;}
+.ai-msg.user{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);align-self:flex-end;text-align:right;}
+.ai-msg.thinking{background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2);align-self:flex-start;color:var(--td);font-style:italic;}
+.ai-hint{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);color:var(--ac);border-radius:6px;padding:4px 9px;font-size:.72rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.ai-hint:hover{background:rgba(0,212,255,.18);}
+#aiMessages::-webkit-scrollbar{width:4px;}
+#aiMessages::-webkit-scrollbar-track{background:transparent;}
+#aiMessages::-webkit-scrollbar-thumb{background:rgba(0,212,255,.2);border-radius:2px;}
+.sort-hdr{cursor:pointer;user-select:none;white-space:nowrap;}
+.sort-hdr:hover{color:var(--ac);}
+.sort-icon{font-size:.65rem;color:var(--ac);margin-left:2px;}
+.stk-tbl thead th{background:var(--s1);}
+.tbl-scroll::-webkit-scrollbar{width:5px;height:5px;}
+.tbl-scroll::-webkit-scrollbar-track{background:var(--bd);}
+.tbl-scroll::-webkit-scrollbar-thumb{background:rgba(0,212,255,.3);border-radius:3px;}
+.tbl-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,212,255,.5);}
+@media(max-width:600px){.kpi-v{font-size:1.1rem;}.card{padding:12px;}.alloc-wrap{flex-direction:column;}.alloc-cw{width:120px;height:120px;}}
+.spinner{display:none;width:12px;height:12px;border:2px solid rgba(0,212,255,.3);border-top-color:var(--ac);border-radius:50%;animation:spin 1s linear infinite;margin-right:5px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning .spinner{display:inline-block;}
+.tab-wrap{display:flex;gap:0;border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:12px;width:fit-content;}
+.tab-btn{padding:6px 14px;background:transparent;border:none;color:var(--td);cursor:pointer;font-size:.73rem;font-family:'Space Mono',monospace;transition:all .2s;border-right:1px solid var(--bd);}
+.tab-btn:last-child{border-right:none;}
+.tab-btn.active{background:var(--ac);color:#000;font-weight:700;}
+.tab-btn:hover:not(.active){background:rgba(0,212,255,.1);color:var(--ac);}
+.stk-section{display:none;}.stk-section.active{display:block;}
+
+/* ── PWA / Mobile ── */
+@media(max-width:768px){
+  body{padding-bottom:env(safe-area-inset-bottom);}
+  .wrap{padding-bottom:calc(74px + env(safe-area-inset-bottom));}
+  header{padding:12px 14px 10px;padding-top:calc(12px + env(safe-area-inset-top));position:sticky;top:0;z-index:50;background:rgba(8,12,20,.95);backdrop-filter:blur(12px);}
+  .logo{font-size:.85rem;}
+  .upd-time{display:none;}
+  #fxBadge{font-size:.65rem;padding:3px 7px;}
+  .page-section{display:none;}
+  .page-section.active{display:block;}
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:rgba(10,15,25,.97);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom);z-index:100;backdrop-filter:blur(16px);}
+  .bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;cursor:pointer;color:var(--td);font-size:.58rem;font-family:'Space Mono',monospace;letter-spacing:.03em;gap:3px;border:none;background:transparent;transition:color .2s;-webkit-tap-highlight-color:transparent;}
+  .bnav-item.active{color:var(--ac);}
+  .bnav-item svg{width:22px;height:22px;stroke-width:1.8;transition:transform .15s;}
+  .bnav-item.active svg{transform:translateY(-1px);}
+  .bnav-dot{width:4px;height:4px;border-radius:50%;background:var(--ac);opacity:0;margin-top:1px;}
+  .bnav-item.active .bnav-dot{opacity:1;}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .kpi{padding:12px;}
+  .kpi-v{font-size:1.05rem;}
+  .grid2,.grid3{grid-template-columns:1fr;}
+  .mob-page-title{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--ac);letter-spacing:.1em;text-transform:uppercase;padding:12px 0 8px;border-bottom:1px solid var(--bd);margin-bottom:12px;}
+  .mob-live-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;margin-bottom:14px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(124,58,237,.15));border:1px solid rgba(0,212,255,.4);border-radius:12px;color:var(--ac);font-family:'Space Mono',monospace;font-size:.8rem;cursor:pointer;letter-spacing:.05em;-webkit-tap-highlight-color:transparent;transition:all .2s;}
+  .mob-live-btn:active{transform:scale(.97);}
+  .mob-live-btn .spinner{display:none;}
+  .mob-live-btn.spinning .spinner{display:inline-block;}
+  #aiToggleBtn{bottom:80px!important;}
+  #aiPanel{bottom:140px!important;}
+}
+@media(min-width:769px){
+  .bottom-nav{display:none;}
+  .page-section{display:block!important;}
+  .mob-live-btn{display:none;}
+  .mob-page-title{display:none;}
+}
+
+</style>
+</head>
+<body>
+<header>
+<div class="logo">ASSET<span>/</span>TRACKER</div>
+<div class="hdr-r">
+<div class="live-badge"><div class="live-dot"></div>LIVE</div>
+
+<div class="upd-time" id="updTime">—</div>
+<button id="sampleBtn" onclick="toggleSampleMode()" style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b;padding:5px 12px;border-radius:7px;cursor:pointer;font-size:.72rem;font-family:'Space Mono',monospace;transition:all .2s;letter-spacing:.05em;" title="架空データでダッシュボードを体験">SAMPLE</button>
+<button class="refresh-btn" id="refBtn" onclick="fetchLivePrices()">
+<span class="spinner" id="sp"></span>株価更新
+</button>
+</div>
+</header>
+<div class="wrap">
+<div id="sampleBanner" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(245,158,11,.08));border:1px solid rgba(245,158,11,.5);border-radius:9px;padding:10px 16px;margin-bottom:14px;align-items:center;gap:10px;font-size:.78rem;color:#f59e0b;font-family:'Space Mono',monospace;">
+  <span style="font-size:1.1rem;">⚠️</span>
+  <span>サンプルデータ表示中 — 実際の資産とは無関係の架空データです</span>
+  <button onclick="toggleSampleMode()" style="margin-left:auto;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.5);color:#f59e0b;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:.7rem;font-family:'Space Mono',monospace;">✕ 閉じる</button>
+</div>
+
+<!-- ─── PAGE: HOME ─── -->
+<div class="page-section active" id="pg-home">
+<div class="mob-page-title">📊 ホーム</div>
+<button class="mob-live-btn" id="refBtnMob" onclick="fetchLivePrices()">
+<span class="spinner" id="spMob"></span>⚡ 株価・為替 LIVE更新
+</button>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+<div class="kpi"><div class="kpi-l">純資産（最新）</div><div class="kpi-v" id="kNet">—</div><div class="kpi-s" id="kNetS">—</div></div>
+<div class="kpi"><div class="kpi-l">総資産</div><div class="kpi-v" id="kTotal">—</div><div class="kpi-s neu" id="kTotalS">—</div></div>
+<div class="kpi"><div class="kpi-l">開始来リターン</div><div class="kpi-v pos" id="kRet">—</div><div class="kpi-s neu" id="kRetS">2023.03 → 2026.02</div></div>
+<div class="kpi"><div class="kpi-l">月次増減（前月比）</div><div class="kpi-v" id="kMom">—</div><div class="kpi-s neu" id="kMomS">—</div></div>
+<div class="kpi"><div class="kpi-l">負債合計</div><div class="kpi-v" id="kLiab">—</div><div class="kpi-s neu" id="kLiabS">—</div></div>
+<div class="kpi" style="border-color:rgba(245,158,11,.3);">
+  <div class="kpi-l" style="color:#f59e0b;">USD/JPY レート</div>
+  <div class="kpi-v" id="kFx" style="color:#f59e0b;">—</div>
+  <div class="kpi-s" id="kFxS">—</div>
+</div>
+<div class="kpi" style="border-color:rgba(16,185,129,.3);">
+  <div class="kpi-l" style="color:#10b981;">含み益総額（全資産）</div>
+  <div class="kpi-v" id="kPnlAll">—</div>
+  <div class="kpi-s" id="kPnlAllS">—</div>
+  <div style="font-size:.6rem;color:var(--td);margin-top:5px;line-height:1.5;" id="kPnlBreak">—</div>
+</div>
+</div>
+
+<!-- Net Worth Chart -->
+<div class="card">
+<div class="top-row">
+<div class="card-title" style="margin-bottom:0">純資産推移</div>
+<div class="period-tabs">
+<button class="ptab" onclick="setPeriod(6,this)">6M</button>
+<button class="ptab" onclick="setPeriod(12,this)">1Y</button>
+<button class="ptab active" onclick="setPeriod(999,this)">ALL</button>
+</div>
+</div>
+<div class="chart-h"><canvas id="cNet"></canvas></div>
+<div class="mom-section" id="momSec"></div>
+</div>
+</div><!-- /pg-home -->
+
+<!-- ─── PAGE: CHARTS ─── -->
+<div class="page-section" id="pg-charts">
+<div class="mob-page-title">📈 チャート</div>
+
+<!-- Alloc + Sector -->
+<div class="grid2">
+<div class="card">
+<div class="card-title">資産アロケーション（最新）</div>
+<div class="alloc-wrap">
+<div class="alloc-cw"><canvas id="cAlloc"></canvas></div>
+<div class="alloc-legend" id="allocLegend"></div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">個別株 セクター別内訳</div>
+<div class="alloc-wrap">
+<div class="alloc-cw"><canvas id="cSector"></canvas></div>
+<div class="alloc-legend" id="sectorLegend"></div>
+</div>
+</div>
+</div>
+
+
+<div class="grid2">
+<div class="card">
+<div class="card-title">カテゴリ別推移</div>
+<div class="chart-hs"><canvas id="cCat"></canvas></div>
+</div>
+<div class="card">
+<div class="card-title">資産・負債バランス（積み上げ）</div>
+<div class="chart-h"><canvas id="cBar"></canvas></div>
+</div>
+</div>
+</div><!-- /pg-charts -->
+
+<!-- ─── PAGE: POSITIONS ─── -->
+<div class="page-section" id="pg-pos">
+<div class="mob-page-title">💼 ポジション</div>
+<!-- Stocks -->
+<div class="card">
+<div class="section-hdr">
+<div class="card-title" style="margin-bottom:0">保有株式ポジション</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+<button id="fetchDayChgBtn" onclick="fetchDayChanges()" style="background:var(--s1);border:1px solid var(--ac);color:var(--ac);border-radius:8px;padding:5px 12px;font-size:.72rem;font-family:'Space Mono',monospace;cursor:pointer;transition:all .2s;">📈 前日比取得</button>
+<span id="fetchDayChgStatus" style="font-size:.65rem;color:var(--td);"></span>
+<div class="tab-wrap">
+<button class="tab-btn active" onclick="showStkTab('indiv',this)">個別株</button>
+<button class="tab-btn" onclick="showStkTab('fund',this)">投資信託</button>
+<button class="tab-btn" onclick="showStkTab('crypto',this)">仮想通貨</button>
+</div>
+</div>
+</div>
+
+<!-- 合計サマリーバー -->
+<div id="posSummary" style="display:flex;gap:0;margin-bottom:12px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;overflow:hidden;">
+  <div style="flex:1;padding:10px 14px;border-right:1px solid var(--bd);">
+    <div id="sumCostLabel" style="font-size:.62rem;color:var(--td);margin-bottom:3px;">取得コスト合計</div>
+    <div id="sumCost" style="font-family:'Space Mono',monospace;font-size:.95rem;font-weight:700;color:var(--tb);">—</div>
+    <div id="sumCount" style="font-size:.62rem;color:var(--td);margin-top:2px;"></div>
+  </div>
+  <div style="flex:1;padding:10px 14px;border-right:1px solid var(--bd);">
+    <div style="font-size:.62rem;color:var(--td);margin-bottom:3px;">評価額合計</div>
+    <div id="sumCur" style="font-family:'Space Mono',monospace;font-size:.95rem;font-weight:700;color:var(--tb);">—</div>
+  </div>
+  <div style="flex:1;padding:10px 14px;border-right:1px solid var(--bd);">
+    <div style="font-size:.62rem;color:var(--td);margin-bottom:3px;">含み損益合計</div>
+    <div id="sumPnl" style="font-family:'Space Mono',monospace;font-size:.95rem;font-weight:700;">—</div>
+  </div>
+  <div style="flex:1;padding:10px 14px;">
+    <div style="font-size:.62rem;color:var(--td);margin-bottom:3px;">騰落率</div>
+    <div id="sumRate" style="font-family:'Space Mono',monospace;font-size:.95rem;font-weight:700;">—</div>
+  </div>
+</div>
+
+<div class="stk-section active" id="stkIndiv">
+<div class="tbl-scroll" style="max-height:420px;overflow-y:auto;">
+<table class="stk-tbl">
+<thead style="position:sticky;top:0;background:var(--s1);z-index:2;">
+<tr>
+  <th class="sort-hdr" data-col="name" onclick="sortStocks('name')">銘柄 <span class="sort-icon" id="si-name"></span></th>
+  <th class="sort-hdr" data-col="code" onclick="sortStocks('code')" style="text-align:right">コード <span class="sort-icon" id="si-code"></span></th>
+  <th class="sort-hdr" data-col="cost" onclick="sortStocks('cost')" style="text-align:right">取得コスト <span class="sort-icon" id="si-cost"></span></th>
+  <th class="sort-hdr" data-col="current" onclick="sortStocks('current')" style="text-align:right">評価額<br><span style="font-size:.6rem;color:var(--ac);font-weight:400">★LIVE更新</span> <span class="sort-icon" id="si-current"></span></th>
+  <th class="sort-hdr" data-col="pnl" onclick="sortStocks('pnl')" style="text-align:right">含み損益 <span class="sort-icon" id="si-pnl"></span></th>
+  <th class="sort-hdr" data-col="rate" onclick="sortStocks('rate')" style="text-align:right">騰落率 <span class="sort-icon" id="si-rate"></span></th>
+  <th style="text-align:right;color:var(--td);font-size:.68rem">前日比</th>
+</tr>
+</thead>
+<tbody id="stkBody"></tbody>
+</table>
+</div>
+</div>
+<div class="stk-section" id="stkFund">
+<div class="tbl-scroll">
+<table class="stk-tbl">
+<thead style="position:sticky;top:0;background:var(--s1);z-index:2;">
+<tr>
+  <th class="sort-hdr" onclick="sortFund('name')">口座 <span class="sort-icon" id="fi-name"></span></th>
+  <th class="sort-hdr" onclick="sortFund('cost')" style="text-align:right">取得コスト <span class="sort-icon" id="fi-cost"></span></th>
+  <th class="sort-hdr" onclick="sortFund('current')" style="text-align:right">評価額 <span class="sort-icon" id="fi-current"></span></th>
+  <th class="sort-hdr" onclick="sortFund('pnl')" style="text-align:right">含み損益 <span class="sort-icon" id="fi-pnl"></span></th>
+  <th class="sort-hdr" onclick="sortFund('rate')" style="text-align:right">騰落率 <span class="sort-icon" id="fi-rate"></span></th>
+</tr>
+</thead>
+<tbody id="fundBody"></tbody>
+</table>
+</div>
+</div><!-- /stkFund -->
+<div class="stk-section" id="stkCrypto">
+<div class="tbl-scroll">
+<table class="stk-tbl">
+<thead style="position:sticky;top:0;background:var(--s1);z-index:2;">
+<tr>
+  <th class="sort-hdr" onclick="sortCrypto('name')">銘柄 <span class="sort-icon" id="ci-name"></span></th>
+  <th class="sort-hdr" onclick="sortCrypto('cost')" style="text-align:right">取得コスト <span class="sort-icon" id="ci-cost"></span></th>
+  <th class="sort-hdr" onclick="sortCrypto('current')" style="text-align:right">評価額 <span class="sort-icon" id="ci-current"></span></th>
+  <th class="sort-hdr" onclick="sortCrypto('pnl')" style="text-align:right">含み損益 <span class="sort-icon" id="ci-pnl"></span></th>
+  <th class="sort-hdr" onclick="sortCrypto('rate')" style="text-align:right">騰落率 <span class="sort-icon" id="ci-rate"></span></th>
+</tr>
+</thead>
+<tbody id="cryptoBody"></tbody>
+</table>
+</div>
+</div>
+
+<!-- History table -->
+<div class="card">
+<div class="card-title">月次サマリー全期間</div>
+<div class="tbl-scroll" style="max-height:430px;overflow-y:auto;">
+<table class="hist-tbl">
+<thead style="position:sticky;top:0;background:var(--s1);z-index:2;">
+<tr>
+  <th class="sort-hdr" onclick="sortHistory('date')" style="text-align:left">期末 <span class="sort-icon" id="hi-date"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('net_assets')">純資産 <span class="sort-icon" id="hi-net_assets"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('mom_rate')">前月比 <span class="sort-icon" id="hi-mom_rate"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('mom_abs')">前月差(万円) <span class="sort-icon" id="hi-mom_abs"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('total_assets')">総資産 <span class="sort-icon" id="hi-total_assets"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('liab_total')">負債 <span class="sort-icon" id="hi-liab_total"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('cash_total')">現金等 <span class="sort-icon" id="hi-cash_total"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('stocks_total')">株式 <span class="sort-icon" id="hi-stocks_total"></span></th>
+  <th class="sort-hdr" onclick="sortHistory('trust')">投資信託<br><span style="font-size:.6rem;font-weight:400">(NISA/iDeCo含む)</span> <span class="sort-icon" id="hi-trust"></span></th>
+</tr>
+</thead>
+<tbody id="histBody"></tbody>
+</table>
+</div>
+</div>
+
+</div><!-- /pg-pos -->
+
+<!-- ─── PAGE: AI ─── -->
+<div class="page-section" id="pg-ai">
+<div class="mob-page-title">🤖 AI相談</div>
+<div class="card" style="display:flex;flex-direction:column;height:calc(100dvh - 200px);min-height:400px;">
+  <div id="aiInlineMsgs" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0 10px;"></div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+    <button class="ai-hint" onclick="sendHintInline(this)">ポートフォリオ評価</button>
+    <button class="ai-hint" onclick="sendHintInline(this)">改善アドバイス</button>
+    <button class="ai-hint" onclick="sendHintInline(this)">リスク分析</button>
+    <button class="ai-hint" onclick="sendHintInline(this)">資産推移の特徴</button>
+  </div>
+  <div style="display:flex;gap:8px;border-top:1px solid var(--bd);padding-top:10px;">
+    <textarea id="aiInputInline" rows="2" placeholder="ポートフォリオについて質問..." style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--t);border-radius:8px;padding:8px 10px;font-size:.82rem;resize:none;font-family:inherit;"></textarea>
+    <button onclick="sendAIInline()" style="background:var(--ac);color:#000;border:none;border-radius:8px;padding:0 16px;font-weight:700;cursor:pointer;font-size:1rem;min-width:44px;">➤</button>
+  </div>
+</div>
+</div><!-- /pg-ai -->
+
+<!-- AI Chat floating (desktop) -->
+<div id="aiChatWrap" style="position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+
+  <!-- Toggle button -->
+  <button id="aiToggleBtn" onclick="toggleChat()" style="
+    width:54px;height:54px;border-radius:50%;
+    background:linear-gradient(135deg,#00d4ff,#7c3aed);
+    border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 20px rgba(0,212,255,.4);
+    font-size:1.4rem;transition:transform .2s;
+  " title="AIアドバイザーに質問">🤖</button>
+
+  <!-- Chat panel -->
+  <div id="aiPanel" style="
+    display:none;
+    width:380px;max-width:calc(100vw - 40px);
+    background:var(--s1);border:1px solid rgba(0,212,255,.3);
+    border-radius:14px;overflow:hidden;
+    box-shadow:0 8px 40px rgba(0,0,0,.5);
+    flex-direction:column;
+  ">
+    <!-- Header -->
+    <div style="
+      padding:12px 16px;
+      background:linear-gradient(90deg,rgba(0,212,255,.1),rgba(124,58,237,.1));
+      border-bottom:1px solid var(--bd);
+      display:flex;align-items:center;justify-content:space-between;
+    ">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem">🤖</span>
+        <div>
+          <div style="font-size:.82rem;font-weight:600;color:var(--tb)">AIファイナンシャルアドバイザー</div>
+          <div style="font-size:.65rem;color:var(--td)">あなたの資産データを把握しています</div>
+        </div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:var(--td);cursor:pointer;font-size:1rem;line-height:1">✕</button>
+    </div>
+
+    <!-- Messages -->
+    <div id="aiMessages" style="
+      height:320px;overflow-y:auto;padding:14px;
+      display:flex;flex-direction:column;gap:10px;
+      scrollbar-width:thin;scrollbar-color:rgba(0,212,255,.2) transparent;
+    ">
+      <div class="ai-msg ai">こんにちは！あなたの資産ポートフォリオデータを持っています。<br>以下のようなことを聞いてみてください：<br><br>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">
+          <button class="ai-hint" onclick="sendHint(this)">ポートフォリオを評価して</button>
+          <button class="ai-hint" onclick="sendHint(this)">今後のアドバイスは？</button>
+          <button class="ai-hint" onclick="sendHint(this)">資産推移の特徴は？</button>
+          <button class="ai-hint" onclick="sendHint(this)">リスク分析して</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div style="padding:10px 12px;border-top:1px solid var(--bd);display:flex;gap:8px;background:var(--s2)">
+      <textarea id="aiInput" rows="2" placeholder="質問を入力してください..." style="
+        flex:1;background:var(--bg);border:1px solid var(--bd);border-radius:8px;
+        color:var(--t);padding:8px 10px;font-size:.8rem;resize:none;
+        font-family:'Noto Sans JP',sans-serif;line-height:1.5;
+        outline:none;transition:border-color .2s;
+      " onkeydown="if((e=event).key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI()}"
+        onfocus="this.style.borderColor='rgba(0,212,255,.5)'"
+        onblur="this.style.borderColor='var(--bd)'"
+      ></textarea>
+      <button onclick="sendAI()" id="aiSendBtn" style="
+        width:38px;height:38px;align-self:flex-end;border-radius:8px;
+        background:linear-gradient(135deg,#00d4ff,#7c3aed);
+        border:none;cursor:pointer;font-size:1rem;
+        display:flex;align-items:center;justify-content:center;
+        transition:opacity .2s;flex-shrink:0;
+      ">➤</button>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+const D=[{"date":"2023-03-31","net_assets":38176561,"total_assets":38567561,"liab_total":391000,"cash_total":25646241,"stocks_total":3793270,"ideco":771492,"crypto":515382,"tsumitate":3188954,"other":4652222,"assets":{"みずほ":564168,"UFJ":40105,"楽天銀行":353362,"SMBC":712538,"住信SBI":635060,"あおぞら":5512364,"ゆうちょ":17145,"HSBC":16097663,"現金":200000,"証券口座残高":1513836},"liabilities":{"カード未払い 来月分":200000,"Visa":150000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":733500},"JAL":{"cost":532074,"current":516400},"TBS":{"cost":378200,"current":381000},"JR東海":{"cost":1558200,"current":1581000},"META":{"cost":573321,"current":581370},"楽天証券":{"cost":699999,"current":700065},"au株コム":{"cost":450008,"current":459069},"SBI":{"cost":1500035,"current":1522400},"マネックス":{"cost":502009,"current":507420},"IDECO":{"cost":771492,"current":771492}}},{"date":"2023-04-30","net_assets":40474057,"total_assets":40865057,"liab_total":391000,"cash_total":27627992,"stocks_total":4631114,"ideco":773135,"crypto":501841,"tsumitate":4192589,"other":3138386,"assets":{"みずほ":564168,"UFJ":40105,"楽天銀行":1758712,"SMBC":7442598,"住信SBI":115060,"あおぞら":998420,"ゆうちょ":17145,"HSBC":16113938,"現金":200000,"証券口座残高":377846},"liabilities":{"カード未払い 来月分":200000,"Visa":150000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":786500},"JAL":{"cost":532074,"current":529400},"META":{"cost":573321,"current":701314},"楽天":{"cost":138000,"current":133800},"JR東海":{"cost":1558200,"current":1697000},"TBS":{"cost":378200,"current":415000},"日テレ":{"cost":345000,"current":368100},"楽天証券":{"cost":749999,"current":798215},"au株コム":{"cost":500009,"current":537671},"SBI":{"cost":2200022,"current":2266689},"マネックス":{"cost":550030,"current":590014},"IDECO":{"cost":783492,"current":773135}}},{"date":"2023-05-31","net_assets":42295640,"total_assets":42686640,"liab_total":391000,"cash_total":25945600,"stocks_total":6285770,"ideco":812428,"crypto":498162,"tsumitate":6056294,"other":3088386,"assets":{"みずほ":564168,"UFJ":40105,"楽天銀行":1599323,"SMBC":3101230,"住信SBI":65060,"あおぞら":998420,"ゆうちょ":17145,"HSBC":16959540,"証券口座残高":2450609,"現金":150000},"liabilities":{"カード未払い 来月分":200000,"Visa":150000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":768800},"JAL":{"cost":532074,"current":533200},"META":{"cost":573334,"current":770320},"光ビ":{"cost":227100,"current":230400},"楽天":{"cost":262000,"current":225000},"TOYOTA":{"cost":390200,"current":381700},"JR東海":{"cost":1558200,"current":1698500},"郵船":{"cost":304600,"current":297250},"TBS":{"cost":378200,"current":453600},"日テレ":{"cost":348000,"current":379500},"ソフトバンク":{"cost":532200,"current":547500},"楽天証券":{"cost":799999,"current":865719},"au株コム":{"cost":550001,"current":596336},"SBI":{"cost":2900011,"current":3123878},"マネックス":{"cost":602020,"current":657933},"IDECO":{"cost":795492,"current":812428}}},{"date":"2023-06-30","net_assets":44112602,"total_assets":44503602,"liab_total":391000,"cash_total":23973546,"stocks_total":8569136,"ideco":899249,"crypto":545909,"tsumitate":7492376,"other":3023386,"assets":{"みずほ":541168,"UFJ":40105,"楽天銀行":1481815,"SMBC":7986390,"住信SBI":47060,"あおぞら":998420,"ゆうちょ":17145,"HSBC":11329637,"証券口座残高":1331806,"現金":200000},"liabilities":{"カード未払い 来月分":200000,"Visa":150000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":797300},"JAL":{"cost":532074,"current":624000},"META":{"cost":573334,"current":866726},"光ビ":{"cost":227100,"current":237300},"楽天":{"cost":262000,"current":206760},"TOYOTA":{"cost":390200,"current":467600},"SBI インシュ":{"cost":201400,"current":208000},"ノーリツ鋼機":{"cost":227500,"current":238500},"三菱商事":{"cost":716700,"current":702200},"岩手銀":{"cost":201300,"current":217900},"JR東海":{"cost":1558200,"current":1804000},"郵船":{"cost":304600,"current":328500},"栗林商船":{"cost":202800,"current":219900},"TBS":{"cost":378200,"current":551700},"日テレ":{"cost":348000,"current":413550},"ソフトバンク":{"cost":532200,"current":685200},"楽天証券":{"cost":849999,"current":995439},"au株コム":{"cost":600006,"current":702075},"SBI":{"cost":3600198,"current":4136162},"マネックス":{"cost":650018,"current":759451},"IDECO":{"cost":807492,"current":899249}}},{"date":"2023-07-31","net_assets":43721126,"total_assets":44612126,"liab_total":891000,"cash_total":22653891,"stocks_total":8767738,"ideco":897870,"crypto":597868,"tsumitate":8671373,"other":3023386,"assets":{"みずほ":541168,"UFJ":40105,"楽天銀行":1677748,"SMBC":6728316,"住信SBI":47060,"あおぞら":998420,"ゆうちょ":17145,"HSBC":11072123,"証券口座残高":1331806,"現金":200000},"liabilities":{"カード未払い 来月分":700000,"Visa":150000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":805300},"JAL":{"cost":532074,"current":615200},"META":{"cost":573334,"current":966098},"光ビ":{"cost":227100,"current":238200},"楽天":{"cost":262000,"current":222040},"TOYOTA":{"cost":390200,"current":477200},"SBI インシュ":{"cost":201400,"current":216000},"ノーリツ鋼機":{"cost":227500,"current":246300},"三菱商事":{"cost":716700,"current":726500},"岩手銀":{"cost":201300,"current":225800},"JR東海":{"cost":1558200,"current":1813500},"郵船":{"cost":304600,"current":344800},"栗林商船":{"cost":202800,"current":210300},"TBS":{"cost":378200,"current":531600},"日テレ":{"cost":348000,"current":404700},"ソフトバンク":{"cost":532200,"current":724200},"楽天証券":{"cost":899999,"current":1053274},"au株コム":{"cost":650013,"current":742574},"SBI":{"cost":4600127,"current":5176340},"マネックス":{"cost":700034,"current":801315},"IDECO":{"cost":819492,"current":897870}}},{"date":"2023-08-31","net_assets":44222894,"total_assets":44603894,"liab_total":381000,"cash_total":20945453,"stocks_total":8941524,"ideco":945172,"crypto":749689,"tsumitate":9963670,"other":3058386,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":933581,"SMBC":11803330,"住信SBI":17060,"あおぞら":1000877,"ゆうちょ":17145,"HSBC":5410379,"証券口座残高":1031806,"現金":150000},"liabilities":{"カード未払い 来月分":300000,"Visa":40000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":828500},"JAL":{"cost":532074,"current":602200},"META":{"cost":573334,"current":910194},"光ビ":{"cost":227100,"current":267900},"楽天":{"cost":262000,"current":229080},"TOYOTA":{"cost":390200,"current":503900},"SBI インシュ":{"cost":201400,"current":220400},"ノーリツ鋼機":{"cost":227500,"current":302500},"三菱商事":{"cost":716700,"current":733500},"岩手銀":{"cost":201300,"current":255400},"JR東海":{"cost":1558200,"current":1872000},"郵船":{"cost":304600,"current":395800},"栗林商船":{"cost":202800,"current":226200},"TBS":{"cost":378200,"current":532800},"日テレ":{"cost":348000,"current":411150},"ソフトバンク":{"cost":532200,"current":650000},"楽天証券":{"cost":949999,"current":1111520},"au株コム":{"cost":700011,"current":811777},"SBI":{"cost":5600235,"current":6222174},"マネックス":{"cost":750018,"current":873027},"IDECO":{"cost":831492,"current":945172}}},{"date":"2023-09-30","net_assets":43392084,"total_assets":43961804,"liab_total":569720,"cash_total":19448732,"stocks_total":9714068,"ideco":937599,"crypto":800882,"tsumitate":10002137,"other":3058386,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":655373,"SMBC":7507768,"住信SBI":2985220,"あおぞら":1000877,"ゆうちょ":17145,"HSBC":5519268,"証券口座残高":1031806,"現金":150000},"liabilities":{"カード未払い 今月引き落とし":278720,"カード未払い 来月分":200000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":855500},"JAL":{"cost":532074,"current":581600},"META":{"cost":573334,"current":941878},"Dena":{"cost":449400,"current":450750},"光ビ":{"cost":227100,"current":292200},"楽天":{"cost":262000,"current":245240},"TOYOTA":{"cost":390200,"current":535500},"SBI インシュ":{"cost":201400,"current":241400},"ノーリツ鋼機":{"cost":227500,"current":332500},"三菱商事":{"cost":716700,"current":712800},"岩手銀":{"cost":201300,"current":261200},"みずほ":{"cost":248350,"current":254100},"JR東海":{"cost":1558200,"current":1817500},"郵船":{"cost":304600,"current":388600},"栗林商船":{"cost":202800,"current":213300},"TBS":{"cost":378200,"current":502900},"日テレ":{"cost":348000,"current":453600},"ソフトバンク":{"cost":532200,"current":633500},"楽天証券":{"cost":1000000,"current":1142303},"au株コム":{"cost":750006,"current":846657},"SBI":{"cost":5650289,"current":6167319},"マネックス":{"cost":800027,"current":908259},"IDECO":{"cost":843492,"current":937599}}},{"date":"2023-10-31","net_assets":42790751,"total_assets":43360471,"liab_total":569720,"cash_total":17939162,"stocks_total":9362171,"ideco":918890,"crypto":940884,"tsumitate":11190978,"other":3008386,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":2497947,"SMBC":8943253,"住信SBI":955222,"あおぞら":1000877,"ゆうちょ":17145,"HSBC":2761637,"証券口座残高":1031806,"現金":150000},"liabilities":{"カード未払い 今月引き落とし":278720,"カード未払い 来月分":200000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":787200},"JAL":{"cost":532074,"current":552800},"META":{"cost":573334,"current":950201},"Dena":{"cost":449400,"current":440250},"光ビ":{"cost":227100,"current":286500},"楽天":{"cost":262000,"current":222720},"TOYOTA":{"cost":390200,"current":518000},"SBI インシュ":{"cost":201400,"current":228800},"ノーリツ鋼機":{"cost":227500,"current":317500},"三菱商事":{"cost":716700,"current":695500},"岩手銀":{"cost":201300,"current":272500},"みずほ":{"cost":260300,"current":254550},"JR東海":{"cost":1558200,"current":1698000},"郵船":{"cost":304600,"current":367700},"栗林商船":{"cost":202800,"current":229500},"TBS":{"cost":378200,"current":489600},"日テレ":{"cost":348000,"current":438450},"ソフトバンク":{"cost":532200,"current":612400},"楽天証券":{"cost":1049999,"current":1152938},"au株コム":{"cost":750006,"current":846657},"SBI":{"cost":7100153,"current":7344905},"マネックス":{"cost":850043,"current":927588},"IDECO":{"cost":855492,"current":918890}}},{"date":"2023-11-30","net_assets":43490605,"total_assets":43741605,"liab_total":251000,"cash_total":15493856,"stocks_total":9616188,"ideco":1001559,"crypto":1000558,"tsumitate":13621058,"other":3008386,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":2312428,"SMBC":7317787,"住信SBI":1250223,"あおぞら":1000877,"ゆうちょ":17145,"HSBC":2723218,"証券口座残高":40903,"現金":250000},"liabilities":{"カード未払い 来月分":200000,"Visa":10000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":799500},"JAL":{"cost":532074,"current":562200},"META":{"cost":573334,"current":1031608},"Dena":{"cost":449400,"current":451200},"光ビ":{"cost":227100,"current":286200},"楽天":{"cost":262000,"current":234280},"TOYOTA":{"cost":390200,"current":558900},"SBI インシュ":{"cost":201400,"current":217800},"ノーリツ鋼機":{"cost":227500,"current":299300},"三菱商事":{"cost":716700,"current":688600},"岩手銀":{"cost":201300,"current":247500},"みずほ":{"cost":260300,"current":251200},"JR東海":{"cost":1558200,"current":1775000},"郵船":{"cost":304600,"current":397400},"栗林商船":{"cost":202800,"current":231900},"TBS":{"cost":378200,"current":549300},"日テレ":{"cost":348000,"current":432300},"ソフトバンク":{"cost":532200,"current":602000},"楽天証券":{"cost":1099999,"current":1289497},"au株コム":{"cost":750006,"current":846657},"SBI":{"cost":8550077,"current":9438504},"マネックス":{"cost":900019,"current":1044841},"IDECO":{"cost":867492,"current":1001559}}},{"date":"2023-12-31","net_assets":48362919,"total_assets":48613919,"liab_total":251000,"cash_total":18913616,"stocks_total":9274822,"ideco":1028441,"crypto":1061767,"tsumitate":15326887,"other":3008386,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":2120770,"SMBC":6019523,"住信SBI":1250223,"あおぞら":1000877,"ゆうちょ":17145,"HSBC":7055750,"証券口座残高":668053,"現金":200000},"liabilities":{"カード未払い 来月分":200000,"Visa":10000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":812900},"JAL":{"cost":532074,"current":555000},"META":{"cost":573334,"current":1048372},"Dena":{"cost":449400,"current":413100},"光ビ":{"cost":227100,"current":267900},"楽天":{"cost":262000,"current":251200},"TOYOTA":{"cost":390200,"current":518100},"SBI インシュ":{"cost":201400,"current":206400},"ノーリツ鋼機":{"cost":227500,"current":299800},"三菱商事":{"cost":716700,"current":676050},"岩手銀":{"cost":201300,"current":250100},"みずほ":{"cost":260300,"current":241250},"JR東海":{"cost":1558200,"current":1792000},"栗林商船":{"cost":202800,"current":251700},"TBS":{"cost":378200,"current":599800},"日テレ":{"cost":348000,"current":461850},"ソフトバンク":{"cost":532200,"current":629300},"楽天証券":{"cost":1149999,"current":1359781},"au株コム":{"cost":750006,"current":846657},"SBI":{"cost":10000015,"current":11047167},"マネックス":{"cost":900019,"current":1044841},"IDECO":{"cost":879492,"current":1028441}}},{"date":"2024-01-31","net_assets":50007373,"total_assets":50298373,"liab_total":291000,"cash_total":16448984,"stocks_total":10542830,"ideco":1111961,"crypto":1072420,"tsumitate":18163792,"other":2958386,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":1605085,"SMBC":3658704,"住信SBI":1345224,"あおぞら":1000877,"ゆうちょ":17145,"HSBC":7422621,"証券口座残高":668053,"現金":150000},"liabilities":{"カード未払い 来月分":200000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":834000},"JAL":{"cost":532074,"current":567000},"META":{"cost":573334,"current":1258000},"マルハニチロ":{"cost":283900,"current":290050},"Dena":{"cost":449400,"current":451200},"光ビ":{"cost":227100,"current":276300},"楽天":{"cost":262000,"current":260480},"TOYOTA":{"cost":390200,"current":591900},"SBI インシュ":{"cost":201400,"current":221600},"ノーリツ鋼機":{"cost":227500,"current":334000},"三菱商事":{"cost":716700,"current":758700},"岩手銀":{"cost":201300,"current":254600},"みずほ":{"cost":260300,"current":263900},"JR東海":{"cost":1558200,"current":1831000},"栗林商船":{"cost":202800,"current":316800},"TBS":{"cost":378200,"current":682400},"日テレ":{"cost":348000,"current":520500},"H.I.S":{"cost":183600,"current":178900},"ソフトバンク":{"cost":532200,"current":651500},"楽天証券":{"cost":1199998,"current":1487165},"au株コム":{"cost":950043,"current":1157878},"SBI":{"cost":11450265,"current":13182509},"マネックス":{"cost":1000026,"current":1224279},"IDECO":{"cost":891492,"current":1111961}}},{"date":"2024-02-28","net_assets":64714864,"total_assets":65025864,"liab_total":311000,"cash_total":24927688,"stocks_total":13768718,"ideco":1185418,"crypto":1486080,"tsumitate":20372960,"other":3285000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":1414085,"SMBC":12590885,"住信SBI":1008611,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":7484870,"証券口座残高":679143,"現金":150000},"liabilities":{"カード未払い 来月分":200000,"Visa":70000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":886500},"JAL":{"cost":532074,"current":559200},"META":{"cost":573334,"current":1521308},"マルハニチロ":{"cost":283900,"current":295750},"Dena":{"cost":449400,"current":439500},"光ビ":{"cost":227100,"current":258600},"楽天":{"cost":262000,"current":328000},"ｺﾝバム":{"cost":192000,"current":191300},"日産":{"cost":383600,"current":412160},"TOYOTA":{"cost":390200,"current":724200},"SBI インシュ":{"cost":201400,"current":239800},"ノーリツ鋼機":{"cost":227500,"current":321000},"三菱商事":{"cost":716700,"current":961500},"三菱UFJ":{"cost":286800,"current":308400},"三井住友":{"cost":774000,"current":834400},"岩手銀":{"cost":201300,"current":264700},"みずほ":{"cost":260300,"current":280100},"JR東海":{"cost":1558200,"current":1884500},"栗林商船":{"cost":202800,"current":315600},"TBS":{"cost":378200,"current":786600},"日テレ":{"cost":348000,"current":636000},"H.I.S":{"cost":183600,"current":171200},"セレスポ":{"cost":266100,"current":269400},"ソフトバンク":{"cost":532200,"current":879000},"楽天証券":{"cost":1249999,"current":1613212},"au株コム":{"cost":1000045,"current":1269076},"SBI":{"cost":12500381,"current":14965117},"マネックス":{"cost":1069465,"current":1340137},"IDECO":{"cost":903492,"current":1185418}}},{"date":"2024-03-31","net_assets":66203832,"total_assets":66564832,"liab_total":361000,"cash_total":23559711,"stocks_total":14177651,"ideco":1247725,"crypto":1658214,"tsumitate":22636531,"other":3285000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":928329,"SMBC":10640591,"住信SBI":1008611,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":7552943,"証券口座残高":1679143,"現金":150000},"liabilities":{"カード未払い 来月分":250000,"Visa":70000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":870450},"JAL":{"cost":532074,"current":581700},"META":{"cost":573334,"current":1543751},"マルハニチロ":{"cost":283900,"current":298100},"Dena":{"cost":449400,"current":466950},"光ビ":{"cost":227100,"current":267900},"楽天":{"cost":262000,"current":351080},"ｺﾝバム":{"cost":192000,"current":200000},"日産":{"cost":383600,"current":418670},"TOYOTA":{"cost":390200,"current":728600},"SBI インシュ":{"cost":201400,"current":210000},"ノーリツ鋼機":{"cost":227500,"current":321000},"三菱商事":{"cost":716700,"current":1026600},"三菱UFJ":{"cost":286800,"current":299300},"三井住友":{"cost":774000,"current":860500},"岩手銀":{"cost":201300,"current":251600},"みずほ":{"cost":260300,"current":293750},"JR東海":{"cost":1558200,"current":1840000},"栗林商船":{"cost":202800,"current":440000},"TBS":{"cost":378200,"current":868000},"日テレ":{"cost":348000,"current":691500},"H.I.S":{"cost":183600,"current":191200},"セレスポ":{"cost":266100,"current":272700},"ソフトバンク":{"cost":532200,"current":884300},"楽天証券":{"cost":1516999,"current":1956134},"au株コム":{"cost":1050050,"current":1368393},"SBI":{"cost":13550180,"current":16620956},"マネックス":{"cost":1100057,"current":1443323},"IDECO":{"cost":915492,"current":1247725}}},{"date":"2024-04-30","net_assets":66154864,"total_assets":66825864,"liab_total":671000,"cash_total":24497108,"stocks_total":13634966,"ideco":1245750,"crypto":1492221,"tsumitate":22670819,"other":3285000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":778330,"SMBC":11964612,"住信SBI":514233,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":7810696,"証券口座残高":1679143,"現金":150000},"liabilities":{"カード未払い 今月引き落とし":300000,"カード未払い 来月分":250000,"Visa":80000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":863400},"JAL":{"cost":532074,"current":568200},"META":{"cost":573334,"current":1417246},"マルハニチロ":{"cost":281500,"current":307500},"Dena":{"cost":450300,"current":478950},"光ビ":{"cost":227100,"current":266400},"楽天":{"cost":262000,"current":295120},"ｺﾝバム":{"cost":192000,"current":201000},"日産":{"cost":383600,"current":384300},"TOYOTA":{"cost":390200,"current":702000},"SBI インシュ":{"cost":201400,"current":198600},"ノーリツ鋼機":{"cost":227500,"current":302500},"三菱商事":{"cost":716700,"current":1058700},"三菱UFJ":{"cost":286800,"current":310500},"三井住友":{"cost":774000,"current":878700},"岩手銀":{"cost":201300,"current":245500},"みずほ":{"cost":260300,"current":299800},"JR東海":{"cost":1558200,"current":1783000},"栗林商船":{"cost":202800,"current":337500},"TBS":{"cost":378200,"current":821800},"日テレ":{"cost":348000,"current":671850},"H.I.S":{"cost":183600,"current":176200},"セレスポ":{"cost":266100,"current":288000},"ソフトバンク":{"cost":532200,"current":778200},"楽天証券":{"cost":1766999,"current":2194181},"au株コム":{"cost":1100054,"current":1412337},"SBI":{"cost":14600488,"current":17578247},"マネックス":{"cost":1150031,"current":1486054},"IDECO":{"cost":927492,"current":1245750}}},{"date":"2024-05-31","net_assets":68011247,"total_assets":68437247,"liab_total":426000,"cash_total":21194209,"stocks_total":14606468,"ideco":1323290,"crypto":1640286,"tsumitate":26387994,"other":3285000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":4028766,"SMBC":8447746,"住信SBI":454242,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":3819713,"証券口座残高":2693648,"現金":150000},"liabilities":{"カード未払い 来月分":305000,"Visa":80000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":832500},"JAL":{"cost":532074,"current":530100},"META":{"cost":573334,"current":1593568},"マルハニチロ":{"cost":281500,"current":322500},"Dena":{"cost":450300,"current":459000},"光ビ":{"cost":227100,"current":268200},"楽天":{"cost":262000,"current":331680},"WOWOW":{"cost":336900,"current":321600},"ｺﾝバム":{"cost":192000,"current":200000},"ユニバーサル":{"cost":149800,"current":164300},"日産":{"cost":383600,"current":378070},"TOYOTA":{"cost":390200,"current":643600},"SBI インシュ":{"cost":201400,"current":206200},"ノーリツ鋼機":{"cost":227500,"current":413500},"三菱商事":{"cost":716700,"current":972900},"三菱UFJ":{"cost":286800,"current":328600},"三井住友":{"cost":774000,"current":1009000},"岩手銀":{"cost":201300,"current":281400},"みずほ":{"cost":260300,"current":312500},"JR東海":{"cost":1558200,"current":1745000},"栗林商船":{"cost":202800,"current":277500},"TBS":{"cost":378200,"current":778000},"日テレ":{"cost":348000,"current":648450},"H.I.S":{"cost":358400,"current":344800},"セレスポ":{"cost":266100,"current":301500},"ソフトバンク":{"cost":532200,"current":942000},"楽天証券":{"cost":2066999,"current":2588109},"au株コム":{"cost":1200056,"current":1572245},"SBI":{"cost":16700040,"current":20615403},"マネックス":{"cost":1200040,"current":1612237},"IDECO":{"cost":939492,"current":1323290}}},{"date":"2024-06-30","net_assets":70221915,"total_assets":70847915,"liab_total":626000,"cash_total":20751514,"stocks_total":15790210,"ideco":1426973,"crypto":1481910,"tsumitate":28112308,"other":3285000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":3734779,"SMBC":7489696,"住信SBI":424248,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":3944866,"証券口座残高":3357831,"現金":200000},"liabilities":{"カード未払い 今月引き落とし":200000,"カード未払い 来月分":305000,"Visa":80000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":782100},"JAL":{"cost":532074,"current":509000},"META":{"cost":573334,"current":1707520},"マルハニチロ":{"cost":281500,"current":320500},"Dena":{"cost":450300,"current":475200},"光ビ":{"cost":227100,"current":267300},"楽天":{"cost":262000,"current":344560},"WOWOW":{"cost":336900,"current":334800},"ｺﾝバム":{"cost":192000,"current":200000},"ユニバーサル":{"cost":149800,"current":152500},"日産":{"cost":383600,"current":386680},"TOYOTA":{"cost":390200,"current":656800},"SBI インシュ":{"cost":201400,"current":207800},"ノーリツ鋼機":{"cost":227500,"current":434000},"三菱商事":{"cost":716700,"current":977400},"三菱UFJ":{"cost":286800,"current":349800},"三井住友":{"cost":774000,"current":1083500},"岩手銀":{"cost":201300,"current":289400},"八十二銀行":{"cost":201900,"current":211000},"百五銀行":{"cost":208800,"current":209700},"みずほ":{"cost":260300,"current":340800},"JR東海":{"cost":1558200,"current":1715000},"栗林商船":{"cost":202800,"current":278700},"東京汽船":{"cost":360000,"current":353400},"TBS":{"cost":378200,"current":826400},"日テレ":{"cost":348000,"current":700050},"H.I.S":{"cost":358400,"current":324000},"セレスポ":{"cost":266100,"current":301800},"ソフトバンク":{"cost":532200,"current":1050500},"楽天証券":{"cost":2218973,"current":2900394},"au株コム":{"cost":1300056,"current":1776114},"SBI":{"cost":16700040,"current":21640894},"マネックス":{"cost":1300054,"current":1794906},"IDECO":{"cost":951492,"current":1426973}}},{"date":"2024-07-31","net_assets":66454773,"total_assets":67195773,"liab_total":741000,"cash_total":19626520,"stocks_total":14210327,"ideco":1327628,"crypto":1285766,"tsumitate":27495532,"other":3250000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":3267849,"SMBC":7197196,"住信SBI":414255,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":3587458,"証券口座残高":3359668,"現金":200000},"liabilities":{"カード未払い 今月引き落とし":300000,"カード未払い 来月分":300000,"Visa":100000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":791700},"JAL":{"cost":532074,"current":464100},"META":{"cost":573334,"current":1502787},"マルハニチロ":{"cost":281500,"current":308600},"Dena":{"cost":450300,"current":444900},"光ビ":{"cost":227100,"current":258000},"楽天":{"cost":262000,"current":315640},"WOWOW":{"cost":336900,"current":319500},"ｺﾝバム":{"cost":192000,"current":195400},"ユニバーサル":{"cost":149800,"current":128300},"日産":{"cost":383600,"current":309470},"TOYOTA":{"cost":390200,"current":517000},"SBI インシュ":{"cost":201400,"current":190000},"ノーリツ鋼機":{"cost":227500,"current":355000},"三菱商事":{"cost":716700,"current":851700},"三菱UFJ":{"cost":286800,"current":303200},"三井住友":{"cost":774000,"current":966200},"岩手銀":{"cost":201300,"current":257700},"八十二銀行":{"cost":201900,"current":198280},"百五銀行":{"cost":179700,"current":180600},"みずほ":{"cost":260300,"current":305400},"JR東海":{"cost":1558200,"current":1649000},"栗林商船":{"cost":202800,"current":227400},"東京汽船":{"cost":347400,"current":340800},"TBS":{"cost":378200,"current":762000},"日テレ":{"cost":348000,"current":664950},"H.I.S":{"cost":358400,"current":333600},"セレスポ":{"cost":266100,"current":282300},"ソフトバンク":{"cost":532200,"current":786800},"楽天証券":{"cost":2517459,"current":2957840},"au株コム":{"cost":1400059,"current":1737781},"SBI":{"cost":17800075,"current":21045208},"マネックス":{"cost":1400034,"current":1754703},"IDECO":{"cost":963492,"current":1327628}}},{"date":"2024-08-31","net_assets":66536445,"total_assets":67277445,"liab_total":741000,"cash_total":17388440,"stocks_total":14526133,"ideco":1360319,"crypto":1256545,"tsumitate":29496008,"other":3250000,"assets":{"みずほ":541170,"UFJ":40105,"楽天銀行":3109850,"SMBC":6087196,"住信SBI":392261,"あおぞら":1001674,"ゆうちょ":17145,"HSBC":3587458,"証券口座残高":2361581,"現金":250000},"liabilities":{"カード未払い 今月引き落とし":300000,"カード未払い 来月分":300000,"Visa":100000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":796950},"JAL":{"cost":460400,"current":465000},"META":{"cost":573334,"current":1635123},"マルハニチロ":{"cost":281500,"current":3400},"Dena":{"cost":450300,"current":511350},"光ビ":{"cost":227100,"current":230700},"楽天":{"cost":262000,"current":356960},"WOWOW":{"cost":336900,"current":327000},"ｺﾝバム":{"cost":192000,"current":199000},"ユニバーサル":{"cost":149800,"current":133500},"日産":{"cost":383600,"current":310100},"TOYOTA":{"cost":390200,"current":548900},"SBI インシュ":{"cost":201400,"current":189000},"ノーリツ鋼機":{"cost":227500,"current":394500},"三菱商事":{"cost":716700,"current":909000},"三菱UFJ":{"cost":286800,"current":310600},"三井住友":{"cost":774000,"current":1019500},"岩手銀":{"cost":201300,"current":254000},"八十二銀行":{"cost":201900,"current":206100},"百五銀行":{"cost":185100,"current":186000},"みずほ":{"cost":260300,"current":314300},"JR東海":{"cost":1558200,"current":1644000},"栗林商船":{"cost":202800,"current":271500},"東京汽船":{"cost":342600,"current":336000},"TBS":{"cost":378200,"current":800200},"日テレ":{"cost":348000,"current":706050},"H.I.S":{"cost":358400,"current":339200},"セレスポ":{"cost":266100,"current":283200},"ソフトバンク":{"cost":532200,"current":845000},"楽天証券":{"cost":2816999,"current":3322408},"au株コム":{"cost":1500062,"current":1865103},"SBI":{"cost":18800832,"current":22427552},"マネックス":{"cost":1500001,"current":1880945},"IDECO":{"cost":975492,"current":1360319}}},{"date":"2024-09-30","net_assets":67148848,"total_assets":67889848,"liab_total":741000,"cash_total":13966130,"stocks_total":16173631,"ideco":1361782,"crypto":1259099,"tsumitate":31879206,"other":3250000,"assets":{"みずほ":501206,"UFJ":40105,"楽天銀行":2134175,"SMBC":4007970,"住信SBI":372267,"あおぞら":1002471,"ゆうちょ":17145,"HSBC":3535784,"証券口座残高":2105007,"現金":250000},"liabilities":{"カード未払い 今月引き落とし":300000,"カード未払い 来月分":300000,"Visa":100000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":859800},"JAL":{"cost":460400,"current":500900},"META":{"cost":573334,"current":1738401},"マルハニチロ":{"cost":281500,"current":318800},"Dena":{"cost":450300,"current":530550},"光ビ":{"cost":227100,"current":231900},"楽天":{"cost":262000,"current":367000},"WOWOW":{"cost":336900,"current":308400},"カナレ電気":{"cost":413400,"current":440700},"ｺﾝバム":{"cost":192000,"current":212000},"キクカワ":{"cost":467000,"current":475500},"ユニバーサル":{"cost":149800,"current":142400},"日産":{"cost":612300,"current":532610},"TOYOTA":{"cost":390200,"current":519200},"SBI インシュ":{"cost":201400,"current":182600},"ノーリツ鋼機":{"cost":227500,"current":442000},"三菱商事":{"cost":716700,"current":908100},"三菱UFJ":{"cost":286800,"current":295900},"三井住友":{"cost":774000,"current":930300},"岩手銀":{"cost":201300,"current":229600},"八十二銀行":{"cost":201900,"current":170220},"百五銀行":{"cost":205500,"current":168300},"みずほ":{"cost":260300,"current":300100},"JR東海":{"cost":1558200,"current":1639500},"栗林商船":{"cost":202800,"current":267300},"東京汽船":{"cost":356400,"current":340200},"TBS":{"cost":378200,"current":793200},"日テレ":{"cost":348000,"current":681750},"H.I.S":{"cost":521800,"current":507600},"セレスポ":{"cost":267300,"current":270600},"ソフトバンク":{"cost":532200,"current":868200},"楽天証券":{"cost":3116999,"current":3684831},"au株コム":{"cost":1600567,"current":1972819},"SBI":{"cost":20500537,"current":24231621},"マネックス":{"cost":1600064,"current":1989935},"IDECO":{"cost":987290,"current":1361782}}},{"date":"2024-10-31","net_assets":77072266,"total_assets":77813266,"liab_total":741000,"cash_total":18962709,"stocks_total":16324132,"ideco":1493881,"crypto":1458690,"tsumitate":36323854,"other":3250000,"assets":{"みずほ":501206,"UFJ":40105,"楽天銀行":1425846,"SMBC":2221315,"住信SBI":372267,"あおぞら":1002471,"ゆうちょ":17145,"HSBC":12625460,"証券口座残高":456894,"現金":300000},"liabilities":{"カード未払い 今月引き落とし":300000,"カード未払い 来月分":300000,"Visa":100000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":919500},"JAL":{"cost":460400,"current":488500},"META":{"cost":573334,"current":1904962},"マルハニチロ":{"cost":281500,"current":297900},"Dena":{"cost":450300,"current":530550},"光ビ":{"cost":227100,"current":228900},"楽天":{"cost":262000,"current":369080},"WOWOW":{"cost":336900,"current":304800},"カナレ電気":{"cost":413400,"current":428400},"ｺﾝバム":{"cost":192000,"current":202900},"キクカワ":{"cost":467000,"current":459000},"ユニバーサル":{"cost":149800,"current":127700},"日産":{"cost":612300,"current":532090},"TOYOTA":{"cost":390200,"current":542300},"SBI インシュ":{"cost":201400,"current":190000},"ノーリツ鋼機":{"cost":227500,"current":392000},"三菱商事":{"cost":716700,"current":854250},"三菱UFJ":{"cost":286800,"current":325800},"三井住友":{"cost":774000,"current":981000},"岩手銀":{"cost":201300,"current":231200},"八十二銀行":{"cost":201900,"current":169400},"百五銀行":{"cost":205500,"current":165900},"みずほ":{"cost":260300,"current":322300},"JR東海":{"cost":1558200,"current":1575000},"栗林商船":{"cost":202800,"current":251100},"東京汽船":{"cost":356400,"current":333000},"TBS":{"cost":378200,"current":755800},"日テレ":{"cost":348000,"current":702600},"H.I.S":{"cost":521800,"current":516000},"セレスポ":{"cost":264600,"current":267900},"ソフトバンク":{"cost":532200,"current":954300},"楽天証券":{"cost":3416999,"current":4209228},"au株コム":{"cost":1700070,"current":2216946},"SBI":{"cost":22200706,"current":27669300},"マネックス":{"cost":1700077,"current":2228380},"IDECO":{"cost":999492,"current":1493881}}},{"date":"2024-11-30","net_assets":79759113,"total_assets":80500113,"liab_total":741000,"cash_total":17662009,"stocks_total":16720935,"ideco":1552957,"crypto":2211205,"tsumitate":39103007,"other":3250000,"assets":{"みずほ":501206,"UFJ":40105,"楽天銀行":1275847,"SMBC":938595,"住信SBI":372267,"あおぞら":1002471,"ゆうちょ":17145,"HSBC":12657479,"証券口座残高":456894,"現金":400000},"liabilities":{"カード未払い 今月引き落とし":300000,"カード未払い 来月分":300000,"Visa":100000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3000},"stocks":{"JR東":{"cost":654625,"current":834000},"JAL":{"cost":460400,"current":482600},"META":{"cost":573334,"current":1824225},"マルハニチロ":{"cost":281500,"current":306000},"Dena":{"cost":450300,"current":755100},"光ビ":{"cost":227100,"current":236700},"楽天":{"cost":262000,"current":351760},"WOWOW":{"cost":336900,"current":300000},"カナレ電気":{"cost":413400,"current":425400},"ｺﾝバム":{"cost":192000,"current":198900},"キクカワ":{"cost":467000,"current":479500},"ユニバーサル":{"cost":149800,"current":125000},"日産":{"cost":612300,"current":528190},"TOYOTA":{"cost":390200,"current":532900},"SBI インシュ":{"cost":201400,"current":197600},"ノーリツ鋼機":{"cost":227500,"current":434500},"三菱商事":{"cost":716700,"current":793950},"三菱UFJ":{"cost":286800,"current":365000},"三井住友":{"cost":774000,"current":1098900},"岩手銀":{"cost":201300,"current":270300},"八十二銀行":{"cost":201900,"current":199960},"百五銀行":{"cost":205500,"current":177900},"みずほ":{"cost":260300,"current":383500},"JR東海":{"cost":1558200,"current":1552000},"栗林商船":{"cost":202800,"current":274500},"東京汽船":{"cost":356400,"current":451200},"TBS":{"cost":378200,"current":738800},"日テレ":{"cost":348000,"current":697650},"H.I.S":{"cost":521800,"current":551400},"セレスポ":{"cost":291600,"current":294900},"ソフトバンク":{"cost":532200,"current":858600},"楽天証券":{"cost":3716999,"current":4570181},"au株コム":{"cost":1800074,"current":2353314},"SBI":{"cost":23900760,"current":29816909},"マネックス":{"cost":1800087,"current":2362603},"IDECO":{"cost":1011492,"current":1552957}}},{"date":"2024-12-31","net_assets":83333470,"total_assets":83924970,"liab_total":591500,"cash_total":11049644,"stocks_total":18750640,"ideco":1619921,"crypto":2424385,"tsumitate":46780380,"other":3300000,"assets":{"みずほ":491392,"UFJ":40105,"楽天銀行":2084935,"SMBC":3389610,"住信SBI":721386,"あおぞら":53159,"ゆうちょ":17145,"HSBC":2030344,"証券口座残高":2121568,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":832800},"JAL":{"cost":532075,"current":511500},"META":{"cost":573334,"current":2343870},"マルハニチロ":{"cost":281500,"current":315400},"Dena":{"cost":450300,"current":1078200},"佐藤食品":{"cost":418400,"current":460000},"光ビ":{"cost":227100,"current":222600},"楽天":{"cost":262000,"current":399360},"WOWOW":{"cost":336900,"current":302700},"カナレ電気":{"cost":413400,"current":453600},"ｺﾝバム":{"cost":192000,"current":198300},"キクカワ":{"cost":467000,"current":605000},"ユニバーサル":{"cost":149800,"current":115300},"日産":{"cost":612300,"current":551200},"TOYOTA":{"cost":390200,"current":554700},"SBI インシュ":{"cost":201400,"current":222200},"ノーリツ鋼機":{"cost":227500,"current":423000},"三菱商事":{"cost":716700,"current":725250},"三菱UFJ":{"cost":286800,"current":396500},"三井住友":{"cost":774000,"current":1163100},"岩手銀":{"cost":201300,"current":321500},"八十二銀行":{"cost":201900,"current":197360},"百五銀行":{"cost":205500,"current":211800},"みずほ":{"cost":260300,"current":435000},"JR東海":{"cost":1558200,"current":1400750},"栗林商船":{"cost":202800,"current":297900},"東京汽船":{"cost":356400,"current":504600},"TBS":{"cost":378200,"current":878200},"日テレ":{"cost":348000,"current":888450},"H.I.S":{"cost":521800,"current":439800},"セレスポ":{"cost":316800,"current":320100},"ソフトバンク":{"cost":532200,"current":980600},"楽天証券":{"cost":4616900,"current":5590200},"au株コム":{"cost":2100085,"current":2721182},"SBI":{"cost":29000680,"current":35836907},"マネックス":{"cost":2000059,"current":2632091},"IDECO":{"cost":1047492,"current":1619921}}},{"date":"2025-01-31","net_assets":82962683,"total_assets":83554183,"liab_total":591500,"cash_total":15580590,"stocks_total":17987514,"ideco":1629627,"crypto":2424385,"tsumitate":42632067,"other":3300000,"assets":{"みずほ":501206,"UFJ":40105,"楽天銀行":2278078,"SMBC":4101287,"住信SBI":341307,"あおぞら":1002471,"ゆうちょ":17145,"HSBC":6342097,"証券口座残高":456894,"現金":500000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":808950},"JAL":{"cost":532075,"current":486800},"META":{"cost":573334,"current":2012434},"マルハニチロ":{"cost":281500,"current":299950},"Dena":{"cost":450300,"current":934500},"佐藤食品":{"cost":418400,"current":434000},"光ビ":{"cost":227100,"current":214500},"楽天":{"cost":262000,"current":348920},"WOWOW":{"cost":336900,"current":303000},"カナレ電気":{"cost":413400,"current":429300},"ｺﾝバム":{"cost":192000,"current":201800},"キクカワ":{"cost":467000,"current":492000},"ユニバーサル":{"cost":149800,"current":102400},"日産":{"cost":612300,"current":661960},"TOYOTA":{"cost":390200,"current":637600},"SBI インシュ":{"cost":201400,"current":207600},"ノーリツ鋼機":{"cost":227500,"current":517000},"三菱商事":{"cost":716700,"current":783150},"三菱UFJ":{"cost":286800,"current":366500},"三井住友":{"cost":774000,"current":1130100},"岩手銀":{"cost":201300,"current":280800},"八十二銀行":{"cost":201900,"current":203300},"百五銀行":{"cost":205500,"current":190800},"みずほ":{"cost":260300,"current":389300},"JR東海":{"cost":1558200,"current":1483000},"栗林商船":{"cost":202800,"current":270600},"東京汽船":{"cost":356400,"current":477600},"TBS":{"cost":378200,"current":821200},"日テレ":{"cost":348000,"current":838350},"H.I.S":{"cost":521800,"current":438000},"セレスポ":{"cost":293400,"current":296700},"ソフトバンク":{"cost":532200,"current":925400},"楽天証券":{"cost":4016999,"current":5024211},"au株コム":{"cost":1900081,"current":2528894},"SBI":{"cost":25600967,"current":32539328},"マネックス":{"cost":1900079,"current":2539634},"IDECO":{"cost":1023492,"current":1629627}}},{"date":"2025-02-28","net_assets":82368254,"total_assets":82959754,"liab_total":591500,"cash_total":10440935,"stocks_total":19371745,"ideco":1610275,"crypto":1743284,"tsumitate":46493515,"other":3300000,"assets":{"みずほ":491394,"UFJ":40105,"楽天銀行":2084935,"SMBC":3389610,"住信SBI":721386,"あおぞら":53159,"ゆうちょ":17145,"HSBC":1995103,"証券口座残高":1548098,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":859800},"JAL":{"cost":532075,"current":529300},"META":{"cost":573334,"current":2203106},"マルハニチロ":{"cost":281500,"current":317100},"Dena":{"cost":450300,"current":1207500},"佐藤食品":{"cost":418400,"current":470000},"光ビ":{"cost":227100,"current":235500},"楽天":{"cost":262000,"current":393000},"WOWOW":{"cost":336900,"current":300000},"カナレ電気":{"cost":413400,"current":449700},"ｺﾝバム":{"cost":192000,"current":193800},"キクカワ":{"cost":467000,"current":593000},"ユニバーサル":{"cost":149800,"current":108000},"日産":{"cost":612300,"current":596440},"TOYOTA":{"cost":390200,"current":541200},"SBI インシュ":{"cost":201400,"current":213000},"ノーリツ鋼機":{"cost":227500,"current":443000},"三菱商事":{"cost":716700,"current":714150},"三菱UFJ":{"cost":286800,"current":389900},"三井住友":{"cost":774000,"current":1165500},"岩手銀":{"cost":201300,"current":307000},"八十二銀行":{"cost":201900,"current":201300},"百五銀行":{"cost":205500,"current":214500},"みずほ":{"cost":260300,"current":425200},"日神グループ":{"cost":212400,"current":211600},"JR東海":{"cost":1558200,"current":1438999},"栗林商船":{"cost":202800,"current":380700},"東京汽船":{"cost":356400,"current":506400},"TBS":{"cost":378200,"current":849000},"日テレ":{"cost":348000,"current":847050},"関西電力":{"cost":340000,"current":342000},"H.I.S":{"cost":521800,"current":455400},"セレスポ":{"cost":267300,"current":330600},"ソフトバンク":{"cost":532200,"current":939000},"楽天証券":{"cost":4616999,"current":5514301},"au株コム":{"cost":2100085,"current":2671376},"SBI":{"cost":29000630,"current":35594321},"マネックス":{"cost":2100086,"current":2713517},"IDECO":{"cost":1047492,"current":1610275}}},{"date":"2025-03-31","net_assets":79820497,"total_assets":80411997,"liab_total":591500,"cash_total":8065617,"stocks_total":19067258,"ideco":1505800,"crypto":1908011,"tsumitate":46565311,"other":3300000,"assets":{"みずほ":90954,"UFJ":40105,"楽天銀行":894576,"SMBC":1744463,"住信SBI":70386,"あおぞら":53159,"ゆうちょ":17145,"HSBC":1930788,"証券口座残高":3124041,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":888300},"JAL":{"cost":532075,"current":512600},"META":{"cost":573334,"current":1805588},"マルハニチロ":{"cost":281500,"current":326600},"Dena":{"cost":450300,"current":1058100},"佐藤食品":{"cost":418400,"current":466000},"光ビ":{"cost":227100,"current":254700},"楽天":{"cost":262000,"current":340760},"WOWOW":{"cost":336900,"current":300900},"カナレ電気":{"cost":413400,"current":477000},"ｺﾝバム":{"cost":192000,"current":200000},"キクカワ":{"cost":467000,"current":592000},"ユニバーサル":{"cost":149800,"current":106200},"日産":{"cost":612300,"current":494260},"TOYOTA":{"cost":390200,"current":526700},"SBI インシュ":{"cost":201400,"current":224800},"ノーリツ鋼機":{"cost":227500,"current":475500},"三菱商事":{"cost":716700,"current":789600},"三菱UFJ":{"cost":286800,"current":404800},"三井住友":{"cost":774000,"current":1141800},"岩手銀":{"cost":201300,"current":317500},"八十二銀行":{"cost":201900,"current":212300},"百五銀行":{"cost":205500,"current":221400},"みずほ":{"cost":260300,"current":408100},"日神グループ":{"cost":212400,"current":206000},"京成":{"cost":452100,"current":407250},"JR東海":{"cost":1558200,"current":1434500},"栗林商船":{"cost":202800,"current":368100},"東京汽船":{"cost":356400,"current":456600},"TBS":{"cost":378200,"current":858000},"日テレ":{"cost":348000,"current":922200},"関西電力":{"cost":340000,"current":355000},"H.I.S":{"cost":521800,"current":431400},"セレスポ":{"cost":267300,"current":334200},"ソフトバンク":{"cost":532200,"current":748500},"楽天証券":{"cost":4917000,"current":5617566},"au株コム":{"cost":2200088,"current":2664849},"SBI":{"cost":30700738,"current":35597572},"マネックス":{"cost":1059492,"current":2685324},"IDECO":{"cost":1047492,"current":1505800}}},{"date":"2025-04-30","net_assets":74785483,"total_assets":75376983,"liab_total":591500,"cash_total":3365821,"stocks_total":19819978,"ideco":1402322,"crypto":1546794,"tsumitate":45942068,"other":3300000,"assets":{"みずほ":90954,"UFJ":40105,"楽天銀行":605000,"SMBC":1510612,"住信SBI":50000,"あおぞら":53159,"ゆうちょ":17145,"HSBC":194145,"証券口座残高":654701,"現金":150000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":932700},"JAL":{"cost":532075,"current":522100},"META":{"cost":573334,"current":1644288},"マルハニチロ":{"cost":281500,"current":323600},"Dena":{"cost":450300,"current":1116000},"佐藤食品":{"cost":418400,"current":473200},"丸八":{"cost":233400,"current":260100},"光ビ":{"cost":227100,"current":314400},"楽天":{"cost":262000,"current":329920},"WOWOW":{"cost":336900,"current":311400},"カナレ電気":{"cost":413400,"current":450300},"ｺﾝバム":{"cost":192000,"current":200000},"キクカワ":{"cost":467000,"current":593000},"ユニバーサル":{"cost":149800,"current":110300},"日産":{"cost":612300,"current":445640},"TOYOTA":{"cost":641080,"current":835930},"マツダ":{"cost":251100,"current":263100},"SBI インシュ":{"cost":201400,"current":220800},"ノーリツ鋼機":{"cost":227500,"current":452000},"三菱商事":{"cost":716700,"current":812850},"三菱UFJ":{"cost":286800,"current":354400},"三井住友":{"cost":774000,"current":1007100},"岩手銀":{"cost":201300,"current":282900},"八十二銀行":{"cost":201900,"current":208500},"百五銀行":{"cost":205500,"current":201600},"みずほ":{"cost":260300,"current":355000},"日神グループ":{"cost":212400,"current":205000},"京成":{"cost":452100,"current":451650},"JR東海":{"cost":1558200,"current":1477000},"栗林商船":{"cost":202800,"current":353400},"東京汽船":{"cost":356400,"current":480000},"TBS":{"cost":378200,"current":952200},"日テレ":{"cost":348000,"current":990000},"関西電力":{"cost":340000,"current":352100},"H.I.S":{"cost":521800,"current":509700},"セレスポ":{"cost":267300,"current":310800},"ソフトバンク":{"cost":532200,"current":717000},"楽天証券":{"cost":5217099,"current":5565669},"au株コム":{"cost":2300093,"current":2576993},"SBI":{"cost":32720196,"current":35178731},"マネックス":{"cost":2397954,"current":2620675},"IDECO":{"cost":1071492,"current":1402322}}},{"date":"2025-05-31","net_assets":94242512,"total_assets":94834012,"liab_total":591500,"cash_total":16522495,"stocks_total":20011146,"ideco":1527419,"crypto":2583179,"tsumitate":50889773,"other":3300000,"assets":{"みずほ":90954,"UFJ":40105,"楽天銀行":455751,"SMBC":1822606,"住信SBI":224425,"あおぞら":53159,"ゆうちょ":17145,"HSBC":13018350,"証券口座残高":650000,"現金":150000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":917100},"JAL":{"cost":532075,"current":550000},"META":{"cost":573334,"current":1915746},"マルハニチロ":{"cost":281500,"current":297600},"Dena":{"cost":450300,"current":855000},"佐藤食品":{"cost":418400,"current":461000},"丸八":{"cost":233400,"current":262500},"光ビ":{"cost":227100,"current":300900},"楽天":{"cost":262000,"current":32080},"WOWOW":{"cost":336900,"current":299700},"カナレ電気":{"cost":413400,"current":457200},"ｺﾝバム":{"cost":192000,"current":205000},"キクカワ":{"cost":467000,"current":560000},"ユニバーサル":{"cost":149800,"current":108600},"日産":{"cost":612300,"current":460720},"TOYOTA":{"cost":641080,"current":786000},"マツダ":{"cost":255750,"current":267750},"SBI インシュ":{"cost":201400,"current":232400},"ノーリツ鋼機":{"cost":227500,"current":437000},"三菱商事":{"cost":716700,"current":874000},"三菱UFJ":{"cost":286800,"current":389000},"三井住友":{"cost":774000,"current":1074000},"岩手銀":{"cost":201300,"current":283900},"八十二銀行":{"cost":201900,"current":230500},"百五銀行":{"cost":205500,"current":204900},"みずほ":{"cost":260300,"current":386800},"テーオーシー":{"cost":332500,"current":343500},"日神グループ":{"cost":212400,"current":195600},"京成":{"cost":452100,"current":409650},"JR東海":{"cost":1558200,"current":1525000},"栗林商船":{"cost":202800,"current":324300},"東京汽船":{"cost":356400,"current":646200},"TBS":{"cost":378200,"current":926600},"日テレ":{"cost":348000,"current":941700},"関西電力":{"cost":340000,"current":325400},"H.I.S":{"cost":521800,"current":466500},"セレスポ":{"cost":267300,"current":311100},"ソフトバンク":{"cost":532200,"current":746200},"楽天証券":{"cost":5516998,"current":6202175},"au株コム":{"cost":2400096,"current":2883892},"SBI":{"cost":33731058,"current":38883594},"マネックス":{"cost":2409980,"current":2920112},"IDECO":{"cost":1083492,"current":1527419}}},{"date":"2025-06-30","net_assets":100228397,"total_assets":100819897,"liab_total":591500,"cash_total":13083231,"stocks_total":22079865,"ideco":1583985,"crypto":2214997,"tsumitate":54597819,"other":7260000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":10191192,"SMBC":1747247,"住信SBI":205425,"あおぞら":53159,"ゆうちょ":17145,"HSBC":0,"証券口座残高":688958,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":928200},"JAL":{"cost":532075,"current":587900},"META":{"cost":573334,"current":2228665},"マルハニチロ":{"cost":281500,"current":302400},"Dena":{"cost":450300,"current":802200},"佐藤食品":{"cost":418400,"current":473000},"丸八":{"cost":269400,"current":264000},"光ビ":{"cost":227100,"current":382200},"楽天":{"cost":262000,"current":316720},"WOWOW":{"cost":336900,"current":301800},"カナレ電気":{"cost":413400,"current":463500},"ｺﾝバム":{"cost":192000,"current":215000},"キクカワ":{"cost":467000,"current":557000},"ユニバーサル":{"cost":149800,"current":97000},"日産":{"cost":612300,"current":457210},"TOYOTA":{"cost":641080,"current":758100},"マツダ":{"cost":256170,"current":268170},"SBI インシュ":{"cost":201400,"current":260800},"ノーリツ鋼機":{"cost":227500,"current":445800},"三菱商事":{"cost":716700,"current":860400},"三菱UFJ":{"cost":286800,"current":396800},"三井住友":{"cost":774000,"current":1087500},"岩手銀":{"cost":201300,"current":305000},"八十二銀行":{"cost":201900,"current":235800},"百五銀行":{"cost":205500,"current":209700},"みずほ":{"cost":260300,"current":397000},"テーオーシー":{"cost":332500,"current":338000},"日神グループ":{"cost":212400,"current":203200},"京成":{"cost":452100,"current":409950},"JR東海":{"cost":1558200,"current":1598500},"川崎船":{"cost":409600,"current":412500},"飯野海運":{"cost":204600,"current":203200},"栗林商船":{"cost":202800,"current":303000},"東京汽船":{"cost":356400,"current":554400},"TBS":{"cost":378200,"current":1014200},"日テレ":{"cost":348000,"current":986000},"関西電力":{"cost":340000,"current":334800},"北海道電力":{"cost":365000,"current":375750},"H.I.S":{"cost":521800,"current":409800},"セレスポ":{"cost":267300,"current":326700},"ソフトバンク":{"cost":532200,"current":1008000},"楽天証券":{"cost":5666998,"current":6679406},"au株コム":{"cost":2500100,"current":3087243},"SBI":{"cost":35140943,"current":41705533},"マネックス":{"cost":2509988,"current":3125637},"IDECO":{"cost":1083492,"current":1583985}}},{"date":"2025-07-30","net_assets":106121314,"total_assets":106712814,"liab_total":591500,"cash_total":11243786,"stocks_total":23792605,"ideco":1671311,"crypto":2926138,"tsumitate":59693974,"other":7385000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":3041192,"SMBC":6283675,"住信SBI":85455,"あおぞら":53159,"ゆうちょ":17145,"HSBC":0,"証券口座残高":1583055,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":957000},"JAL":{"cost":532075,"current":591700},"META":{"cost":573334,"current":2173555},"マルハニチロ":{"cost":281500,"current":306100},"Dena":{"cost":450300,"current":735000},"佐藤食品":{"cost":418400,"current":470000},"丸八":{"cost":269400,"current":270000},"光ビ":{"cost":227100,"current":354300},"楽天":{"cost":262000,"current":320800},"WOWOW":{"cost":336900,"current":412800},"カナレ電気":{"cost":413400,"current":472800},"カネソウ":{"cost":499500,"current":487500},"ｺﾝバム":{"cost":192000,"current":228000},"キクカワ":{"cost":467000,"current":575000},"ユニバーサル":{"cost":149800,"current":97900},"日産":{"cost":612300,"current":428220},"TOYOTA":{"cost":641080,"current":856350},"マツダ":{"cost":286230,"current":298230},"SBI インシュ":{"cost":201400,"current":292400},"ノーリツ鋼機":{"cost":227500,"current":450300},"三菱商事":{"cost":716700,"current":905400},"三菱UFJ":{"cost":286800,"current":419500},"三井住友":{"cost":774000,"current":1146300},"岩手銀":{"cost":201300,"current":337000},"八十二銀行":{"cost":201900,"current":262100},"百五銀行":{"cost":205500,"current":227100},"みずほ":{"cost":260300,"current":440000},"テーオーシー":{"cost":332500,"current":357000},"日神グループ":{"cost":212400,"current":207600},"京成":{"cost":452100,"current":382500},"JR東海":{"cost":1558200,"current":1695500},"川崎船":{"cost":409600,"current":423700},"飯野海運":{"cost":204600,"current":213200},"栗林商船":{"cost":202800,"current":328500},"東京汽船":{"cost":356400,"current":555000},"TBS":{"cost":378200,"current":1006600},"日テレ":{"cost":348000,"current":991500},"関西電力":{"cost":340000,"current":365100},"九州電力":{"cost":386100,"current":400800},"北海道電力":{"cost":365000,"current":422750},"H.I.S":{"cost":521800,"current":415000},"セレスポ":{"cost":267300,"current":330000},"ソフトバンク":{"cost":532200,"current":1182500},"楽天証券":{"cost":5967000,"current":7305675},"au株コム":{"cost":2600104,"current":3346819},"SBI":{"cost":35431379,"current":43994436},"マネックス":{"cost":2610037,"current":3375733},"IDECO":{"cost":1083492,"current":1671311}}},{"date":"2025-08-30","net_assets":112568948,"total_assets":113160448,"liab_total":591500,"cash_total":7717591,"stocks_total":28488067,"ideco":1706773,"crypto":2664398,"tsumitate":63613619,"other":8970000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":2092749,"SMBC":3197144,"住信SBI":51481,"あおぞら":53159,"ゆうちょ":17145,"HSBC":0,"証券口座残高":2125808,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":250000,"カード未払い 来月分":250000,"Visa":50000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1084200},"JAL":{"cost":532075,"current":627400},"META":{"cost":573334,"current":2280987},"マルハニチロ":{"cost":281500,"current":329400},"Dena":{"cost":450300,"current":671250},"佐藤食品":{"cost":418400,"current":629000},"丸八":{"cost":269400,"current":277200},"光ビ":{"cost":227100,"current":378900},"アステラス":{"cost":476700,"current":486000},"楽天":{"cost":262000,"current":366760},"WOWOW":{"cost":336900,"current":526200},"小林製薬":{"cost":519100,"current":532400},"JFE":{"cost":344800,"current":367800},"カナレ電気":{"cost":413400,"current":501300},"カネソウ":{"cost":499500,"current":514000},"藤商事":{"cost":323600,"current":326000},"ｺﾝバム":{"cost":192000,"current":223300},"キクカワ":{"cost":467000,"current":623000},"ユニバーサル":{"cost":149800,"current":104300},"日産":{"cost":612300,"current":432120},"TOYOTA":{"cost":641080,"current":861900},"マツダ":{"cost":286500,"current":298500},"SBI インシュ":{"cost":201400,"current":316800},"ノーリツ鋼機":{"cost":227500,"current":505800},"三菱商事":{"cost":716700,"current":1006200},"三菱UFJ":{"cost":286800,"current":451800},"三井住友":{"cost":774000,"current":1214400},"岩手銀":{"cost":201300,"current":373000},"八十二銀行":{"cost":201900,"current":289200},"百五銀行":{"cost":205500,"current":250200},"みずほ":{"cost":260300,"current":489500},"テーオーシー":{"cost":332500,"current":396500},"日神グループ":{"cost":212400,"current":228400},"京成":{"cost":714000,"current":680500},"JR東海":{"cost":1558200,"current":1961500},"川崎船":{"cost":409600,"current":453700},"飯野海運":{"cost":204600,"current":239600},"栗林商船":{"cost":202800,"current":339300},"東京汽船":{"cost":356400,"current":599400},"TBS":{"cost":378200,"current":1083600},"日テレ":{"cost":348000,"current":1162500},"関西電力":{"cost":340000,"current":411400},"九州電力":{"cost":386100,"current":466950},"北海道電力":{"cost":365000,"current":583000},"H.I.S":{"cost":666000,"current":596800},"セレスポ":{"cost":267300,"current":323100},"ソフトバンク":{"cost":532200,"current":1623000},"楽天証券":{"cost":6266999,"current":7765647},"au株コム":{"cost":2700111,"current":3508024},"SBI":{"cost":37560532,"current":47085598},"マネックス":{"cost":2710014,"current":3547577},"IDECO":{"cost":1083492,"current":1706773}}},{"date":"2025-09-30","net_assets":117777048,"total_assets":119018548,"liab_total":1241500,"cash_total":5530246,"stocks_total":29413820,"ideco":1845304,"crypto":2849430,"tsumitate":70409748,"other":8970000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":65121,"SMBC":3145196,"住信SBI":49489,"あおぞら":53159,"ゆうちょ":17145,"HSBC":0,"証券口座残高":1820031,"現金":300000},"liabilities":{"カード未払い 今月引き落とし":100000,"カード未払い 来月分":100000,"Visa":1000000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1067400},"JAL":{"cost":532075,"current":579400},"META":{"cost":573334,"current":2351530},"マルハニチロ":{"cost":281500,"current":338900},"Dena":{"cost":450300,"current":704700},"佐藤食品":{"cost":418400,"current":630000},"丸八":{"cost":269400,"current":290700},"光ビ":{"cost":227100,"current":384300},"アステラス":{"cost":476700,"current":486900},"楽天":{"cost":262000,"current":398280},"WOWOW":{"cost":336900,"current":426000},"小林製薬":{"cost":509100,"current":522400},"JFE":{"cost":334000,"current":357000},"カナレ電気":{"cost":413400,"current":552300},"カネソウ":{"cost":499500,"current":510000},"藤商事":{"cost":317100,"current":319500},"ｺﾝバム":{"cost":192000,"current":235300},"キクカワ":{"cost":467000,"current":620000},"ユニバーサル":{"cost":149800,"current":94100},"日産":{"cost":612300,"current":465660},"TOYOTA":{"cost":641080,"current":869700},"マツダ":{"cost":309000,"current":321000},"SBI インシュ":{"cost":201400,"current":291400},"ノーリツ鋼機":{"cost":227500,"current":511500},"三菱商事":{"cost":716700,"current":1073400},"三菱UFJ":{"cost":286800,"current":458100},"三井住友":{"cost":774000,"current":1202100},"岩手銀":{"cost":201300,"current":375500},"八十二銀行":{"cost":201900,"current":291900},"百五銀行":{"cost":205500,"current":270000},"みずほ":{"cost":260300,"current":474900},"テーオーシー":{"cost":332500,"current":406500},"日神グループ":{"cost":212400,"current":240000},"京成":{"cost":714000,"current":673500},"JR東海":{"cost":1558200,"current":2138000},"川崎船":{"cost":409600,"current":402800},"飯野海運":{"cost":204600,"current":229200},"栗林商船":{"cost":202800,"current":600000},"東京汽船":{"cost":356400,"current":568800},"TBS":{"cost":378200,"current":1035000},"日テレ":{"cost":348000,"current":1110000},"関西電力":{"cost":340000,"current":438000},"九州電力":{"cost":386100,"current":446100},"北海道電力":{"cost":365000,"current":559750},"H.I.S":{"cost":610800,"current":541600},"セレスポ":{"cost":267300,"current":320700},"ソフトバンク":{"cost":532200,"current":2230000},"楽天証券":{"cost":6716999,"current":8899896},"au株コム":{"cost":2900121,"current":4017599},"SBI":{"cost":39870722,"current":53523275},"マネックス":{"cost":2823359,"current":3968978},"IDECO":{"cost":1083492,"current":1845304}}},{"date":"2025-10-31","net_assets":114702793,"total_assets":115944293,"liab_total":1241500,"cash_total":1776672,"stocks_total":29370500,"ideco":1859257,"crypto":2681869,"tsumitate":73830995,"other":6425000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":253423,"SMBC":186351,"住信SBI":49489,"あおぞら":53159,"ゆうちょ":17145,"HSBC":0,"証券口座残高":837000,"現金":300000},"liabilities":{"カード未払い 今月引き落とし":100000,"カード未払い 来月分":100000,"Visa":1000000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1097700},"JAL":{"cost":532075,"current":583100},"META":{"cost":573334,"current":2394410},"マルハニチロ":{"cost":281500,"current":338900},"Dena":{"cost":450300,"current":704700},"佐藤食品":{"cost":418400,"current":630000},"丸八":{"cost":269400,"current":290700},"光ビ":{"cost":227100,"current":384300},"アステラス":{"cost":476700,"current":486900},"楽天":{"cost":262000,"current":398280},"WOWOW":{"cost":336900,"current":426000},"小林製薬":{"cost":509100,"current":522400},"JFE":{"cost":334000,"current":357000},"カナレ電気":{"cost":413400,"current":552300},"カネソウ":{"cost":499500,"current":510000},"藤商事":{"cost":317100,"current":319500},"ｺﾝバム":{"cost":192000,"current":235300},"キクカワ":{"cost":467000,"current":620000},"ユニバーサル":{"cost":149800,"current":94100},"日産":{"cost":612300,"current":465660},"TOYOTA":{"cost":641080,"current":869700},"マツダ":{"cost":309000,"current":321000},"SBI インシュ":{"cost":201400,"current":291400},"ノーリツ鋼機":{"cost":227500,"current":511500},"三菱商事":{"cost":716700,"current":1073400},"三菱UFJ":{"cost":286800,"current":458100},"三井住友":{"cost":774000,"current":1202100},"岩手銀":{"cost":201300,"current":375500},"八十二銀行":{"cost":201900,"current":291900},"百五銀行":{"cost":205500,"current":270000},"みずほ":{"cost":260300,"current":474900},"テーオーシー":{"cost":332500,"current":406500},"日神グループ":{"cost":212400,"current":240000},"京成":{"cost":714000,"current":673500},"JR東海":{"cost":1558200,"current":2138000},"川崎船":{"cost":409600,"current":402800},"飯野海運":{"cost":204600,"current":229200},"栗林商船":{"cost":202800,"current":600000},"東京汽船":{"cost":356400,"current":568800},"TBS":{"cost":378200,"current":1035000},"日テレ":{"cost":348000,"current":1110000},"関西電力":{"cost":340000,"current":438000},"九州電力":{"cost":386100,"current":446100},"北海道電力":{"cost":365000,"current":559750},"H.I.S":{"cost":610800,"current":541600},"セレスポ":{"cost":267300,"current":320700},"ソフトバンク":{"cost":532200,"current":2109800},"楽天証券":{"cost":6716999,"current":8972864},"au株コム":{"cost":2900121,"current":4046663},"SBI":{"cost":40751091,"current":54861000},"マネックス":{"cost":2909973,"current":4091211},"IDECO":{"cost":1083492,"current":1859257}}},{"date":"2025-11-30","net_assets":120183175,"total_assets":121424675,"liab_total":1241500,"cash_total":2487644,"stocks_total":30335568,"ideco":1911108,"crypto":2820455,"tsumitate":76444900,"other":7425000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":794809,"SMBC":607079,"住信SBI":49489,"あおぞら":53159,"ゆうちょ":17145,"HSBC":-2001520,"証券口座残高":2787378,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":100000,"カード未払い 来月分":100000,"Visa":1000000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1213425},"JAL":{"cost":532075,"current":582600},"META":{"cost":573334,"current":2125133},"マルハニチロ":{"cost":281500,"current":380600},"Dena":{"cost":450300,"current":723900},"佐藤食品":{"cost":418400,"current":654000},"丸八":{"cost":269400,"current":292500},"光ビ":{"cost":227100,"current":384000},"アステラス":{"cost":476700,"current":590700},"楽天":{"cost":262000,"current":381800},"WOWOW":{"cost":336900,"current":441300},"小林製薬":{"cost":532000,"current":522000},"JFE":{"cost":342800,"current":383000},"カナレ電気":{"cost":413400,"current":565000},"カネソウ":{"cost":499500,"current":511000},"藤商事":{"cost":315000,"current":314400},"ｺﾝバム":{"cost":192000,"current":232200},"キクカワ":{"cost":467000,"current":617000},"ユニバーサル":{"cost":149800,"current":75100},"日産":{"cost":612300,"current":499460},"TOYOTA":{"cost":641080,"current":939900},"マツダ":{"cost":251100,"current":342900},"SBI インシュ":{"cost":201400,"current":400800},"ノーリツ鋼機":{"cost":227500,"current":539100},"三菱商事":{"cost":716700,"current":1110600},"三菱UFJ":{"cost":286800,"current":484700},"三井住友":{"cost":774000,"current":1409400},"岩手銀":{"cost":201300,"current":494500},"八十二銀行":{"cost":201900,"current":334700},"百五銀行":{"cost":205500,"current":312900},"みずほ":{"cost":260300,"current":547300},"テーオーシー":{"cost":332500,"current":460000},"日神グループ":{"cost":212400,"current":298800},"京成":{"cost":714000,"current":633750},"JR東海":{"cost":1558200,"current":2134000},"川崎船":{"cost":409600,"current":415000},"飯野海運":{"cost":204600,"current":283600},"栗林商船":{"cost":202800,"current":579900},"東京汽船":{"cost":356400,"current":591000},"TBS":{"cost":378200,"current":1163200},"日テレ":{"cost":348000,"current":1200000},"関西電力":{"cost":340000,"current":533800},"九州電力":{"cost":386100,"current":522600},"北海道電力":{"cost":365000,"current":604500},"H.I.S":{"cost":668700,"current":513500},"セレスポ":{"cost":267300,"current":313500},"ソフトバンク":{"cost":532200,"current":1682500},"楽天証券":{"cost":7016999,"current":9485262},"au株コム":{"cost":3010122,"current":4240996},"SBI":{"cost":41130945,"current":56506240},"マネックス":{"cost":3023871,"current":4301294},"IDECO":{"cost":1083492,"current":1911108}}},{"date":"2025-12-31","net_assets":120798885,"total_assets":122162111,"liab_total":1363226,"cash_total":648048,"stocks_total":30914188,"ideco":1944572,"crypto":2652978,"tsumitate":78577325,"other":7425000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":660652,"SMBC":730278,"住信SBI":49489,"あおぞら":53159,"ゆうちょ":17145,"HSBC":-2001520,"証券口座残高":958740,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":221726,"カード未払い 来月分":100000,"Visa":1000000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1239600},"JAL":{"cost":532075,"current":581000},"META":{"cost":573334,"current":2172158},"マルハニチロ":{"cost":281500,"current":385800},"Dena":{"cost":450300,"current":761400},"佐藤食品":{"cost":418400,"current":711700},"丸八":{"cost":269400,"current":326700},"光ビ":{"cost":227100,"current":380700},"アステラス":{"cost":476700,"current":627900},"楽天":{"cost":262000,"current":401600},"WOWOW":{"cost":336900,"current":434400},"小林製薬":{"cost":532000,"current":542800},"JFE":{"cost":342800,"current":399500},"カナレ電気":{"cost":413400,"current":560700},"カネソウ":{"cost":499500,"current":533000},"藤商事":{"cost":315000,"current":323100},"ｺﾝバム":{"cost":192000,"current":237400},"キクカワ":{"cost":467000,"current":618000},"ユニバーサル":{"cost":149800,"current":79600},"日産":{"cost":612300,"current":507130},"TOYOTA":{"cost":641080,"current":1006800},"マツダ":{"cost":251100,"current":365700},"SBI インシュ":{"cost":201400,"current":404400},"ノーリツ鋼機":{"cost":227500,"current":557100},"三菱商事":{"cost":716700,"current":1075800},"三菱UFJ":{"cost":286800,"current":498600},"三井住友":{"cost":774000,"current":1512300},"岩手銀":{"cost":201300,"current":520000},"八十二銀行":{"cost":201900,"current":339500},"百五銀行":{"cost":205500,"current":343800},"みずほ":{"cost":260300,"current":570000},"テーオーシー":{"cost":332500,"current":423000},"日神グループ":{"cost":212400,"current":299200},"京成":{"cost":714000,"current":644500},"JR東海":{"cost":1558200,"current":2168500},"川崎船":{"cost":409600,"current":436200},"飯野海運":{"cost":204600,"current":283600},"栗林商船":{"cost":202800,"current":598800},"東京汽船":{"cost":356400,"current":615000},"TBS":{"cost":378200,"current":1155800},"日テレ":{"cost":348000,"current":1141500},"関西電力":{"cost":340000,"current":491000},"九州電力":{"cost":386100,"current":503700},"北海道電力":{"cost":365000,"current":525500},"H.I.S":{"cost":668700,"current":528400},"セレスポ":{"cost":267300,"current":321300},"ソフトバンク":{"cost":532200,"current":1760000},"個別株小計":{"cost":19249714,"current":30914188},"楽天証券":{"cost":7316998,"current":9981467},"au株コム":{"cost":3010122,"current":4240996},"SBI":{"cost":41460351,"current":57981583},"マネックス":{"cost":3100123,"current":4428707},"IDECO":{"cost":1083492,"current":1944572},"投資信託小計":{"cost":55971086,"current":78577325},"合計":{"cost":77167416,"current":112839580}}},{"date":"2026-01-31","net_assets":122622695,"total_assets":123985921,"liab_total":1363226,"cash_total":-585543,"stocks_total":31735571,"ideco":1920731,"crypto":3080155,"tsumitate":80410007,"other":7425000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":59900,"SMBC":48755,"住信SBI":47530,"あおぞら":53159,"ゆうちょ":17145,"HSBC":-2001520,"証券口座残高":1009383,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":221726,"カード未払い 来月分":100000,"Visa":1000000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1167900},"JAL":{"cost":532075,"current":584900},"META":{"cost":573334,"current":2321031},"マルハニチロ":{"cost":281500,"current":426550},"Dena":{"cost":450300,"current":759300},"佐藤食品":{"cost":418400,"current":688600},"丸八":{"cost":269400,"current":337200},"光ビ":{"cost":227100,"current":378000},"アステラス":{"cost":476700,"current":463200},"楽天":{"cost":262000,"current":370000},"WOWOW":{"cost":336900,"current":434700},"小林製薬":{"cost":532000,"current":540700},"JFE":{"cost":342800,"current":427200},"カナレ電気":{"cost":413400,"current":552300},"カネソウ":{"cost":499500,"current":510000},"藤商事":{"cost":315000,"current":327000},"ｺﾝバム":{"cost":192000,"current":249100},"キクカワ":{"cost":467000,"current":608000},"ユニバーサル":{"cost":149800,"current":77800},"日産":{"cost":612300,"current":490490},"TOYOTA":{"cost":641080,"current":1051200},"マツダ":{"cost":251100,"current":355950},"SBI インシュ":{"cost":201400,"current":439800},"ノーリツ鋼機":{"cost":227500,"current":659400},"三菱商事":{"cost":716700,"current":1229100},"三菱UFJ":{"cost":286800,"current":560900},"三井住友":{"cost":774000,"current":1641600},"岩手銀":{"cost":201300,"current":610000},"八十二銀行":{"cost":201900,"current":385000},"百五銀行":{"cost":205500,"current":420900},"みずほ":{"cost":260300,"current":678300},"テーオーシー":{"cost":332500,"current":428000},"日神グループ":{"cost":212400,"current":322000},"京成":{"cost":714000,"current":610500},"JR東海":{"cost":1558200,"current":2153500},"川崎船":{"cost":409600,"current":445800},"飯野海運":{"cost":204600,"current":313600},"栗林商船":{"cost":202800,"current":574500},"東京汽船":{"cost":356400,"current":737400},"TBS":{"cost":378200,"current":1198000},"日テレ":{"cost":348000,"current":1114200},"関西電力":{"cost":340000,"current":493600},"九州電力":{"cost":386100,"current":516750},"北海道電力":{"cost":365000,"current":524500},"H.I.S":{"cost":668700,"current":524400},"セレスポ":{"cost":267300,"current":331500},"ソフトバンク":{"cost":532200,"current":1701200},"個別株小計":{"cost":19249714,"current":31735571},"楽天証券":{"cost":7616999,"current":10390825},"au株コム":{"cost":3200125,"current":4566228},"SBI":{"cost":41750190,"current":58908161},"マネックス":{"cost":3210069,"current":4624062},"IDECO":{"cost":1083492,"current":1920731},"投資信託小計":{"cost":56860875,"current":80410007},"合計":{"cost":78157310,"current":115225733}}},{"date":"2026-02-28","net_assets":129101408,"total_assets":130542908,"liab_total":1441500,"cash_total":1940445,"stocks_total":33858909,"ideco":1947232,"crypto":2084414,"tsumitate":83286908,"other":7425000,"assets":{"みずほ":40000,"UFJ":40105,"楽天銀行":75896,"SMBC":51104,"住信SBI":47530,"あおぞら":53159,"ゆうちょ":17145,"HSBC":-2001520,"証券口座残高":3517026,"現金":100000},"liabilities":{"カード未払い 今月引き落とし":200000,"カード未払い 来月分":200000,"Visa":1000000,"光熱費未払い":12000,"携帯代未払い":6000,"駐車場未払い":20000,"WIFI":3500},"stocks":{"JR東":{"cost":654625,"current":1158000},"JAL":{"cost":532075,"current":645600},"META":{"cost":573334,"current":2134359},"マルハニチロ":{"cost":281500,"current":447600},"Dena":{"cost":450300,"current":798000},"佐藤食品":{"cost":418400,"current":726000},"丸八":{"cost":269400,"current":376800},"光ビ":{"cost":227100,"current":380400},"アステラス":{"cost":476700,"current":780450},"楽天":{"cost":262000,"current":331240},"WOWOW":{"cost":336900,"current":407100},"小林製薬":{"cost":532000,"current":583000},"JFE":{"cost":342800,"current":440100},"カナレ電気":{"cost":413400,"current":641100},"カネソウ":{"cost":499500,"current":534000},"藤商事":{"cost":315000,"current":316800},"ｺﾝバム":{"cost":192000,"current":277000},"キクカワ":{"cost":467000,"current":662000},"ユニバーサル":{"cost":149800,"current":74500},"日産":{"cost":612300,"current":563160},"TOYOTA":{"cost":641080,"current":1147500},"マツダ":{"cost":251100,"current":416550},"SBI インシュ":{"cost":201400,"current":485600},"ノーリツ鋼機":{"cost":227500,"current":681000},"三菱商事":{"cost":716700,"current":1587000},"三菱UFJ":{"cost":286800,"current":593700},"三井住友":{"cost":774000,"current":1799100},"岩手銀":{"cost":201300,"current":710000},"八十二銀行":{"cost":201900,"current":415900},"百五銀行":{"cost":205500,"current":510000},"みずほ":{"cost":260300,"current":715100},"テーオーシー":{"cost":332500,"current":458000},"日神グループ":{"cost":212400,"current":329200},"京成":{"cost":714000,"current":678000},"JR東海":{"cost":1558200,"current":2304000},"川崎船":{"cost":409600,"current":502600},"飯野海運":{"cost":204600,"current":332800},"栗林商船":{"cost":202800,"current":653400},"東京汽船":{"cost":356400,"current":777000},"TBS":{"cost":378200,"current":1182000},"日テレ":{"cost":348000,"current":1020000},"関西電力":{"cost":340000,"current":564600},"九州電力":{"cost":386100,"current":604200},"北海道電力":{"cost":365000,"current":615250},"H.I.S":{"cost":668700,"current":521000},"セレスポ":{"cost":267300,"current":342600},"ソフトバンク":{"cost":532200,"current":1635600},"個別株小計":{"cost":19249714,"current":33858909},"楽天証券":{"cost":7766999,"current":10841443},"au株コム":{"cost":3315127,"current":4798743},"SBI":{"cost":41981756,"current":60839974},"マネックス":{"cost":3310028,"current":4859516},"IDECO":{"cost":1083492,"current":1947232},"投資信託小計":{"cost":57457402,"current":83286908},"合計":{"cost":78754171,"current":119230231}}}];
+const TICKERS={JR東:'9020.T',JAL:'9201.T',TBS:'9401.T',JR東海:'9022.T',META:'META',マルハニチロ:'1334.T',Dena:'2432.T',三菱商事:'8058.T',三菱UFJ:'8306.T',三井住友:'8316.T',みずほ:'8411.T',TOYOTA:'7203.T',JFE:'5411.T',ノーリツ鋼機:'7744.T',SBIインシュ:'7326.T'};
+let liveP={},netCh=null,allocCh=null,catCh=null,barCh=null,period=999;
+let dayChange={};
+
+const fmt=(n,u='万')=>u==='万'?Math.round(n/10000).toLocaleString()+'万円':Math.round(n).toLocaleString()+'円';
+const fmtN=n=>Math.abs(n)>=100000000?(n/100000000).toFixed(2)+'億円':fmt(n);
+const pct=(v,d=1)=>(v>=0?'+':'')+((v)*100).toFixed(d)+'%';
+const pc=(v)=>v>=0?'pos':'neg';
+
+function latest(){return activeD()[activeD().length-1];}
+
+// 仮想通貨 取得コストマップ（Excelの「Cript」行 col8から抽出）
+const CRYPTO_COST = {
+  "2023-03": 700000,
+  "2023-04": 700000,
+  "2023-05": 700000,
+  "2023-06": 700000,
+  "2023-07": 700000,
+  "2023-08": 1000000,
+  "2023-09": 1000000,
+  "2023-10": 1000000,
+  "2023-11": 1000000,
+  "2023-12": 1000000,
+  "2024-01": 1000000,
+  "2024-02": 1000000,
+  "2024-03": 1000000,
+  "2024-04": 1000000,
+  "2024-05": 1000000,
+  "2024-06": 1000000,
+  "2024-07": 1000000,
+  "2024-08": 1000000,
+  "2024-09": 1000000,
+  "2024-10": 1000000,
+  "2024-11": 1000000,
+  "2024-12": 1000000,
+  "2025-01": 1000000,
+  "2025-02": 1100000,
+  "2025-03": 1200000,
+  "2025-04": 1246791,
+  "2025-05": 2047055,
+  "2025-06": 2047055,
+  "2025-07": 2047055,
+  "2025-08": 2047055,
+  "2025-09": 2047055,
+  "2025-10": 2047055,
+  "2025-11": 2047055,
+  "2025-12": 2047055,
+  "2026-01": 2047055,
+  "2026-02": 2047055,
+  "2026-03": 2047055,
+};
+function getCryptoCost(dateStr){
+  // dateStr例: "2026-02-28" → "2026-02"
+  const ym = dateStr.slice(0,7);
+  return activeCryptoCost()[ym] || null;
+}
+
+// ── SAMPLE MODE ──────────────────────────────────────────────────
+const SAMPLE_D=[{"date":"2023-03-31","net_assets":5201684,"total_assets":5225161,"liab_total":23477,"cash_total":1326440,"stocks_total":691842,"ideco":75238,"crypto":90325,"tsumitate":1257797,"other":486517,"assets":{"みずほ":112508,"UFJ":8204,"楽天銀行":53504,"SMBC":116950,"住信SBI":6467,"あおぞら":41714,"ゆうちょ":128649,"証券口座残高":120842,"現金":16613},"liabilities":{"カード未払い 来月分":34731,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"アルファ電機":{"cost":56431,"current":80376},"ゼータ建設":{"cost":87221,"current":78991},"クシー重工":{"cost":46441,"current":63089},"ラムダ機械":{"cost":132633,"current":176969},"イオタ自動車":{"cost":154054,"current":180510},"楽天証券":{"cost":586557,"current":358476},"SBI":{"cost":1880101,"current":3254094},"マネックス":{"cost":223703,"current":344043},"IDECO":{"cost":103094,"current":75238}}},{"date":"2023-04-30","net_assets":5439198,"total_assets":5470316,"liab_total":31118,"cash_total":1409649,"stocks_total":692669,"ideco":85872,"crypto":58732,"tsumitate":880618,"other":250529,"assets":{"みずほ":179582,"UFJ":90388,"楽天銀行":85007,"SMBC":44982,"住信SBI":54645,"あおぞら":178972,"ゆうちょ":100936,"証券口座残高":129187,"現金":15134},"liabilities":{"カード未払い 来月分":38228,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ゼータ建設":{"cost":146384,"current":198454},"オミクロン石油":{"cost":161919,"current":159883},"ニュー小売":{"cost":35457,"current":36849},"イオタ自動車":{"cost":75515,"current":73747},"シータ海運":{"cost":190294,"current":261810},"楽天証券":{"cost":257338,"current":532926},"SBI":{"cost":1489079,"current":3526552},"マネックス":{"cost":191770,"current":188868},"IDECO":{"cost":89865,"current":85872}}},{"date":"2023-05-31","net_assets":5597950,"total_assets":5638331,"liab_total":40381,"cash_total":1693650,"stocks_total":952492,"ideco":156498,"crypto":78337,"tsumitate":892748,"other":558967,"assets":{"みずほ":31702,"UFJ":16613,"楽天銀行":36972,"SMBC":202204,"住信SBI":222965,"あおぞら":100476,"ゆうちょ":14692,"証券口座残高":99610,"現金":39883},"liabilities":{"カード未払い 来月分":33227,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"シグマ不動産":{"cost":48963,"current":54390},"アルファ電機":{"cost":107133,"current":152374},"デルタ輸送":{"cost":178894,"current":180331},"イオタ自動車":{"cost":115099,"current":110171},"ラムダ機械":{"cost":185146,"current":254077},"楽天証券":{"cost":249222,"current":522538},"SBI":{"cost":2022425,"current":1089085},"マネックス":{"cost":252502,"current":260238},"IDECO":{"cost":111145,"current":156498}}},{"date":"2023-06-30","net_assets":5739644,"total_assets":5771944,"liab_total":32300,"cash_total":1435567,"stocks_total":797229,"ideco":59632,"crypto":110723,"tsumitate":1596596,"other":515993,"assets":{"みずほ":17573,"UFJ":249123,"楽天銀行":221425,"SMBC":17144,"住信SBI":90937,"あおぞら":12549,"ゆうちょ":126014,"証券口座残高":149558,"現金":13851},"liabilities":{"カード未払い 来月分":31882,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"シグマ不動産":{"cost":187915,"current":244883},"ゼータ建設":{"cost":147277,"current":188186},"イオタ自動車":{"cost":97828,"current":122579},"ロー保険":{"cost":93481,"current":129916},"クシー重工":{"cost":106752,"current":106617},"デルタ輸送":{"cost":40884,"current":35267},"楽天証券":{"cost":376960,"current":490717},"SBI":{"cost":517977,"current":2865091},"マネックス":{"cost":111774,"current":137524},"IDECO":{"cost":81256,"current":59632}}},{"date":"2023-07-31","net_assets":5771379,"total_assets":5814427,"liab_total":43048,"cash_total":2036322,"stocks_total":770001,"ideco":113744,"crypto":88835,"tsumitate":1444019,"other":536409,"assets":{"みずほ":99721,"UFJ":183718,"楽天銀行":143298,"SMBC":31270,"住信SBI":208357,"あおぞら":97720,"ゆうちょ":105192,"証券口座残高":162298,"現金":11625},"liabilities":{"カード未払い 来月分":36336,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"デルタ輸送":{"cost":62570,"current":73317},"ベータ食品":{"cost":53830,"current":51681},"ニュー小売":{"cost":108646,"current":149354},"ラムダ機械":{"cost":42815,"current":57150},"ウプシロン観光":{"cost":175514,"current":159497},"パイ電力":{"cost":140864,"current":165424},"楽天証券":{"cost":107378,"current":178755},"SBI":{"cost":2383913,"current":1356414},"マネックス":{"cost":181282,"current":245153},"IDECO":{"cost":114586,"current":113744}}},{"date":"2023-08-31","net_assets":6117722,"total_assets":6165585,"liab_total":47863,"cash_total":1730871,"stocks_total":613354,"ideco":108947,"crypto":117859,"tsumitate":1598703,"other":349413,"assets":{"みずほ":253151,"UFJ":231734,"楽天銀行":165274,"SMBC":105703,"住信SBI":37840,"あおぞら":41586,"ゆうちょ":11416,"証券口座残高":145645,"現金":11828},"liabilities":{"カード未払い 来月分":27840,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ベータ食品":{"cost":193332,"current":173625},"タウ精密":{"cost":61590,"current":74340},"パイ電力":{"cost":144786,"current":143500},"ロー保険":{"cost":50380,"current":69734},"ゼータ建設":{"cost":71856,"current":86709},"アルファ電機":{"cost":135294,"current":149031},"楽天証券":{"cost":391836,"current":449353},"SBI":{"cost":2836765,"current":1253629},"マネックス":{"cost":243238,"current":182058},"IDECO":{"cost":95831,"current":108947}}},{"date":"2023-09-30","net_assets":6337151,"total_assets":6396994,"liab_total":59843,"cash_total":1964513,"stocks_total":874154,"ideco":158665,"crypto":67968,"tsumitate":1283218,"other":633127,"assets":{"みずほ":29711,"UFJ":83269,"楽天銀行":98940,"SMBC":327190,"住信SBI":251235,"あおぞら":206602,"ゆうちょ":72138,"証券口座残高":70507,"現金":35012},"liabilities":{"カード未払い 来月分":37588,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ウプシロン観光":{"cost":74959,"current":103730},"ロー保険":{"cost":156210,"current":147348},"アルファ電機":{"cost":77898,"current":76057},"カッパ繊維":{"cost":88289,"current":111464},"デルタ輸送":{"cost":174995,"current":201812},"オミクロン石油":{"cost":72690,"current":101394},"ガンマ化学":{"cost":38635,"current":47543},"楽天証券":{"cost":514674,"current":147774},"SBI":{"cost":1333891,"current":1018622},"マネックス":{"cost":295959,"current":162011},"IDECO":{"cost":97673,"current":158665}}},{"date":"2023-10-31","net_assets":6575268,"total_assets":6610036,"liab_total":34768,"cash_total":2381439,"stocks_total":745798,"ideco":190031,"crypto":111189,"tsumitate":965445,"other":277224,"assets":{"みずほ":263607,"UFJ":182613,"楽天銀行":17147,"SMBC":140520,"住信SBI":331789,"あおぞら":281140,"ゆうちょ":10252,"証券口座残高":96515,"現金":30462},"liabilities":{"カード未払い 来月分":36673,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ミュー銀行":{"cost":195955,"current":261886},"シグマ不動産":{"cost":179840,"current":155538},"クシー重工":{"cost":155215,"current":162868},"イプシロン製薬":{"cost":188238,"current":250608},"シータ海運":{"cost":176890,"current":236404},"タウ精密":{"cost":75356,"current":99652},"ガンマ化学":{"cost":48376,"current":66434},"楽天証券":{"cost":529296,"current":260133},"SBI":{"cost":2541466,"current":2072970},"マネックス":{"cost":161038,"current":326789},"IDECO":{"cost":89103,"current":190031}}},{"date":"2023-11-30","net_assets":6438284,"total_assets":6474271,"liab_total":35987,"cash_total":1858255,"stocks_total":897441,"ideco":175681,"crypto":126633,"tsumitate":1096069,"other":505333,"assets":{"みずほ":364664,"UFJ":160641,"楽天銀行":250451,"SMBC":25856,"住信SBI":205102,"あおぞら":31232,"ゆうちょ":157951,"証券口座残高":84510,"現金":13252},"liabilities":{"カード未払い 来月分":30864,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ラムダ機械":{"cost":62313,"current":54625},"クシー重工":{"cost":104129,"current":120992},"ロー保険":{"cost":167106,"current":210906},"デルタ輸送":{"cost":189844,"current":245320},"ニュー小売":{"cost":63495,"current":70401},"オミクロン石油":{"cost":191308,"current":268302},"カッパ繊維":{"cost":135936,"current":169652},"楽天証券":{"cost":162312,"current":687029},"SBI":{"cost":1767806,"current":2734057},"マネックス":{"cost":165236,"current":301274},"IDECO":{"cost":102176,"current":175681}}},{"date":"2023-12-31","net_assets":6393797,"total_assets":6447146,"liab_total":53349,"cash_total":2448734,"stocks_total":930281,"ideco":159606,"crypto":75064,"tsumitate":1422229,"other":411533,"assets":{"みずほ":149517,"UFJ":97440,"楽天銀行":346227,"SMBC":225531,"住信SBI":105731,"あおぞら":135239,"ゆうちょ":188019,"証券口座残高":116452,"現金":33812},"liabilities":{"カード未払い 来月分":43995,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ゼータ建設":{"cost":69927,"current":72461},"ガンマ化学":{"cost":167115,"current":156822},"カッパ繊維":{"cost":37856,"current":54526},"ロー保険":{"cost":133916,"current":175576},"ラムダ機械":{"cost":107420,"current":148420},"ベータ食品":{"cost":127864,"current":163794},"クシー重工":{"cost":95276,"current":103830},"ニュー小売":{"cost":55087,"current":69551},"楽天証券":{"cost":546329,"current":662077},"SBI":{"cost":2713663,"current":3090945},"マネックス":{"cost":143768,"current":329068},"IDECO":{"cost":107836,"current":159606}}},{"date":"2024-01-31","net_assets":6499299,"total_assets":6541656,"liab_total":42357,"cash_total":2349374,"stocks_total":1365479,"ideco":80767,"crypto":73659,"tsumitate":1323489,"other":467091,"assets":{"みずほ":149772,"UFJ":332494,"楽天銀行":165823,"SMBC":277496,"住信SBI":254117,"あおぞら":100402,"ゆうちょ":194027,"証券口座残高":107968,"現金":14774},"liabilities":{"カード未払い 来月分":41537,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"オミクロン石油":{"cost":104778,"current":133919},"イオタ自動車":{"cost":69863,"current":73461},"シータ海運":{"cost":181814,"current":163331},"タウ精密":{"cost":55641,"current":60082},"パイ電力":{"cost":55976,"current":54765},"ラムダ機械":{"cost":100527,"current":105405},"デルタ輸送":{"cost":109207,"current":96905},"イプシロン製薬":{"cost":171591,"current":185950},"楽天証券":{"cost":484897,"current":716019},"SBI":{"cost":548829,"current":3418101},"マネックス":{"cost":215138,"current":244014},"IDECO":{"cost":117709,"current":80767}}},{"date":"2024-02-29","net_assets":6513535,"total_assets":6569447,"liab_total":55912,"cash_total":2136422,"stocks_total":1348282,"ideco":174006,"crypto":100192,"tsumitate":1642935,"other":573139,"assets":{"みずほ":209124,"UFJ":105932,"楽天銀行":177420,"SMBC":128463,"住信SBI":203064,"あおぞら":209700,"ゆうちょ":159988,"証券口座残高":159265,"現金":37586},"liabilities":{"カード未払い 来月分":44518,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"シグマ不動産":{"cost":177364,"current":170098},"アルファ電機":{"cost":74226,"current":77670},"ニュー小売":{"cost":107298,"current":112931},"タウ精密":{"cost":179538,"current":182581},"ガンマ化学":{"cost":191704,"current":211437},"ラムダ機械":{"cost":171934,"current":194660},"エータ情報":{"cost":157334,"current":138650},"パイ電力":{"cost":191826,"current":188859},"楽天証券":{"cost":134309,"current":723089},"SBI":{"cost":600645,"current":699295},"マネックス":{"cost":149456,"current":338199},"IDECO":{"cost":104853,"current":174006}}},{"date":"2024-03-31","net_assets":6494735,"total_assets":6538970,"liab_total":44235,"cash_total":2238814,"stocks_total":738624,"ideco":188055,"crypto":95150,"tsumitate":1078930,"other":403541,"assets":{"みずほ":431560,"UFJ":259931,"楽天銀行":240920,"SMBC":43624,"住信SBI":79243,"あおぞら":137400,"ゆうちょ":194419,"証券口座残高":124853,"現金":37240},"liabilities":{"カード未払い 来月分":29382,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"エータ情報":{"cost":165358,"current":196703},"ガンマ化学":{"cost":36981,"current":43254},"シータ海運":{"cost":142458,"current":126983},"デルタ輸送":{"cost":140082,"current":120133},"カッパ繊維":{"cost":101409,"current":116024},"クシー重工":{"cost":103698,"current":110678},"ラムダ機械":{"cost":181567,"current":204416},"パイ電力":{"cost":56008,"current":53525},"ベータ食品":{"cost":118696,"current":147215},"楽天証券":{"cost":407956,"current":699359},"SBI":{"cost":2436603,"current":2087596},"マネックス":{"cost":265146,"current":274043},"IDECO":{"cost":92892,"current":188055}}},{"date":"2024-04-30","net_assets":6479758,"total_assets":6513213,"liab_total":33455,"cash_total":2831164,"stocks_total":864862,"ideco":123219,"crypto":113426,"tsumitate":1442218,"other":518972,"assets":{"みずほ":280397,"UFJ":166481,"楽天銀行":233004,"SMBC":153310,"住信SBI":103977,"あおぞら":106654,"ゆうちょ":213510,"証券口座残高":164413,"現金":26673},"liabilities":{"カード未払い 来月分":32915,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"エータ情報":{"cost":110935,"current":141675},"ガンマ化学":{"cost":106189,"current":91359},"シータ海運":{"cost":80020,"current":87433},"クシー重工":{"cost":71361,"current":89085},"パイ電力":{"cost":92733,"current":109618},"イオタ自動車":{"cost":88438,"current":128056},"ニュー小売":{"cost":123566,"current":131114},"デルタ輸送":{"cost":107136,"current":110775},"ミュー銀行":{"cost":69191,"current":88756},"楽天証券":{"cost":257773,"current":588015},"SBI":{"cost":2877193,"current":2808523},"マネックス":{"cost":138308,"current":312037},"IDECO":{"cost":91059,"current":123219}}},{"date":"2024-05-31","net_assets":6654030,"total_assets":6686120,"liab_total":32090,"cash_total":2675196,"stocks_total":1141930,"ideco":197027,"crypto":121943,"tsumitate":1153305,"other":410240,"assets":{"みずほ":379109,"UFJ":59002,"楽天銀行":21318,"SMBC":25108,"住信SBI":128701,"あおぞら":389389,"ゆうちょ":213737,"証券口座残高":147862,"現金":13077},"liabilities":{"カード未払い 来月分":20306,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"カッパ繊維":{"cost":49394,"current":43921},"パイ電力":{"cost":113596,"current":135884},"タウ精密":{"cost":146696,"current":138046},"オミクロン石油":{"cost":167894,"current":238321},"ラムダ機械":{"cost":44480,"current":44431},"ガンマ化学":{"cost":124872,"current":137322},"アルファ電機":{"cost":131341,"current":160374},"イプシロン製薬":{"cost":161867,"current":174529},"シータ海運":{"cost":184445,"current":189685},"楽天証券":{"cost":394262,"current":390162},"SBI":{"cost":1921573,"current":792736},"マネックス":{"cost":292021,"current":145800},"IDECO":{"cost":110509,"current":197027}}},{"date":"2024-06-30","net_assets":6848063,"total_assets":6895637,"liab_total":47574,"cash_total":2074478,"stocks_total":751523,"ideco":101332,"crypto":106281,"tsumitate":1014717,"other":441775,"assets":{"みずほ":195494,"UFJ":13233,"楽天銀行":108218,"SMBC":100094,"住信SBI":285088,"あおぞら":20465,"ゆうちょ":63879,"証券口座残高":84392,"現金":33737},"liabilities":{"カード未払い 来月分":34744,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"エータ情報":{"cost":58206,"current":60218},"クシー重工":{"cost":157322,"current":187452},"デルタ輸送":{"cost":79063,"current":73102},"シータ海運":{"cost":147075,"current":186761},"イプシロン製薬":{"cost":190254,"current":218846},"オミクロン石油":{"cost":113945,"current":102352},"パイ電力":{"cost":36776,"current":40792},"ガンマ化学":{"cost":84794,"current":84812},"ベータ食品":{"cost":45525,"current":64970},"アルファ電機":{"cost":172112,"current":205694},"楽天証券":{"cost":575393,"current":749730},"SBI":{"cost":2180703,"current":1462435},"マネックス":{"cost":108046,"current":316629},"IDECO":{"cost":98820,"current":101332}}},{"date":"2024-07-31","net_assets":7056393,"total_assets":7090311,"liab_total":33918,"cash_total":3056932,"stocks_total":859318,"ideco":153170,"crypto":115356,"tsumitate":1471333,"other":320886,"assets":{"みずほ":204446,"UFJ":382639,"楽天銀行":423835,"SMBC":135626,"住信SBI":265343,"あおぞら":95537,"ゆうちょ":292971,"証券口座残高":155763,"現金":26502},"liabilities":{"カード未払い 来月分":31370,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ラムダ機械":{"cost":108535,"current":95784},"イオタ自動車":{"cost":118134,"current":144546},"ウプシロン観光":{"cost":114743,"current":127964},"デルタ輸送":{"cost":38774,"current":39170},"ニュー小売":{"cost":52272,"current":53464},"クシー重工":{"cost":179743,"current":205055},"タウ精密":{"cost":34907,"current":42866},"アルファ電機":{"cost":165883,"current":211645},"シグマ不動産":{"cost":82827,"current":71082},"オミクロン石油":{"cost":99358,"current":97849},"楽天証券":{"cost":520702,"current":191480},"SBI":{"cost":2867651,"current":2672671},"マネックス":{"cost":130794,"current":362489},"IDECO":{"cost":91674,"current":153170}}},{"date":"2024-08-31","net_assets":7294369,"total_assets":7338344,"liab_total":43975,"cash_total":2429740,"stocks_total":1151780,"ideco":141834,"crypto":106263,"tsumitate":1065237,"other":375197,"assets":{"みずほ":362913,"UFJ":57291,"楽天銀行":28987,"SMBC":306290,"住信SBI":286246,"あおぞら":95010,"ゆうちょ":203916,"証券口座残高":84732,"現金":10076},"liabilities":{"カード未払い 来月分":38151,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"タウ精密":{"cost":159688,"current":171876},"ウプシロン観光":{"cost":188584,"current":258692},"パイ電力":{"cost":196731,"current":195409},"イプシロン製薬":{"cost":95105,"current":129685},"オミクロン石油":{"cost":99831,"current":103914},"イオタ自動車":{"cost":110405,"current":154352},"シータ海運":{"cost":94809,"current":136813},"ゼータ建設":{"cost":164706,"current":204434},"ニュー小売":{"cost":55857,"current":79813},"シグマ不動産":{"cost":51461,"current":73548},"楽天証券":{"cost":265997,"current":183229},"SBI":{"cost":2612598,"current":919077},"マネックス":{"cost":282088,"current":123990},"IDECO":{"cost":85766,"current":141834}}},{"date":"2024-09-30","net_assets":7623382,"total_assets":7646594,"liab_total":23212,"cash_total":3384715,"stocks_total":830791,"ideco":195391,"crypto":96437,"tsumitate":1770047,"other":486745,"assets":{"みずほ":223091,"UFJ":426738,"楽天銀行":292345,"SMBC":466150,"住信SBI":248133,"あおぞら":306856,"ゆうちょ":139225,"証券口座残高":120332,"現金":28523},"liabilities":{"カード未払い 来月分":25869,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"カッパ繊維":{"cost":147980,"current":205996},"シータ海運":{"cost":37818,"current":50210},"ガンマ化学":{"cost":79872,"current":85854},"クシー重工":{"cost":54746,"current":63981},"デルタ輸送":{"cost":126207,"current":167288},"ニュー小売":{"cost":58897,"current":52853},"ラムダ機械":{"cost":178042,"current":217536},"ミュー銀行":{"cost":70941,"current":99154},"ベータ食品":{"cost":54330,"current":61213},"タウ精密":{"cost":73176,"current":73409},"シグマ不動産":{"cost":31597,"current":42111},"楽天証券":{"cost":550604,"current":546894},"SBI":{"cost":894939,"current":2013535},"マネックス":{"cost":169113,"current":272768},"IDECO":{"cost":105557,"current":195391}}},{"date":"2024-10-31","net_assets":7706751,"total_assets":7749627,"liab_total":42876,"cash_total":2312176,"stocks_total":1552420,"ideco":107773,"crypto":106714,"tsumitate":1595123,"other":417955,"assets":{"みずほ":266238,"UFJ":406203,"楽天銀行":97524,"SMBC":301661,"住信SBI":163655,"あおぞら":59842,"ゆうちょ":115549,"証券口座残高":139153,"現金":32340},"liabilities":{"カード未払い 来月分":21226,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ウプシロン観光":{"cost":136802,"current":190434},"パイ電力":{"cost":139877,"current":144823},"カッパ繊維":{"cost":104939,"current":125690},"シータ海運":{"cost":154501,"current":139681},"ミュー銀行":{"cost":80168,"current":104097},"デルタ輸送":{"cost":59858,"current":55625},"ラムダ機械":{"cost":121699,"current":174381},"オミクロン石油":{"cost":120244,"current":168112},"シグマ不動産":{"cost":171180,"current":171895},"イプシロン製薬":{"cost":170197,"current":193872},"ガンマ化学":{"cost":167103,"current":216888},"楽天証券":{"cost":269357,"current":192556},"SBI":{"cost":2907233,"current":1050422},"マネックス":{"cost":293300,"current":343636},"IDECO":{"cost":108968,"current":107773}}},{"date":"2024-11-30","net_assets":8095719,"total_assets":8133910,"liab_total":38191,"cash_total":3590078,"stocks_total":1591217,"ideco":140181,"crypto":144968,"tsumitate":991768,"other":584465,"assets":{"みずほ":483428,"UFJ":418073,"楽天銀行":314742,"SMBC":390634,"住信SBI":373017,"あおぞら":35782,"ゆうちょ":74392,"証券口座残高":53253,"現金":36527},"liabilities":{"カード未払い 来月分":34035,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ウプシロン観光":{"cost":81741,"current":93640},"シータ海運":{"cost":46522,"current":64309},"ガンマ化学":{"cost":53062,"current":59545},"オミクロン石油":{"cost":143982,"current":186583},"カッパ繊維":{"cost":190815,"current":210178},"ラムダ機械":{"cost":156185,"current":147237},"エータ情報":{"cost":100530,"current":91423},"ベータ食品":{"cost":113188,"current":123926},"シグマ不動産":{"cost":191758,"current":166758},"アルファ電機":{"cost":92990,"current":103779},"ロー保険":{"cost":191594,"current":261194},"楽天証券":{"cost":149677,"current":551978},"SBI":{"cost":1861164,"current":3729096},"マネックス":{"cost":171734,"current":223516},"IDECO":{"cost":87592,"current":140181}}},{"date":"2024-12-31","net_assets":8012907,"total_assets":8064378,"liab_total":51471,"cash_total":3362268,"stocks_total":1238523,"ideco":186343,"crypto":131548,"tsumitate":1822826,"other":330784,"assets":{"みずほ":164545,"UFJ":81407,"楽天銀行":352315,"SMBC":38859,"住信SBI":417267,"あおぞら":96411,"ゆうちょ":96297,"証券口座残高":163060,"現金":19856},"liabilities":{"カード未払い 来月分":23688,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ウプシロン観光":{"cost":32526,"current":43064},"アルファ電機":{"cost":70448,"current":73566},"イオタ自動車":{"cost":59621,"current":52552},"イプシロン製薬":{"cost":156092,"current":181948},"ロー保険":{"cost":156763,"current":178043},"シグマ不動産":{"cost":162262,"current":187890},"パイ電力":{"cost":48539,"current":55931},"ニュー小売":{"cost":190720,"current":167074},"ガンマ化学":{"cost":163148,"current":223543},"ベータ食品":{"cost":118646,"current":133456},"タウ精密":{"cost":193884,"current":171877},"ミュー銀行":{"cost":111426,"current":121562},"楽天証券":{"cost":443048,"current":428869},"SBI":{"cost":2774252,"current":835170},"マネックス":{"cost":116158,"current":278157},"IDECO":{"cost":82627,"current":186343}}},{"date":"2025-01-31","net_assets":8014165,"total_assets":8058382,"liab_total":44217,"cash_total":3018257,"stocks_total":1328770,"ideco":132263,"crypto":159852,"tsumitate":1727054,"other":538735,"assets":{"みずほ":60769,"UFJ":415398,"楽天銀行":433722,"SMBC":274823,"住信SBI":282216,"あおぞら":223930,"ゆうちょ":57869,"証券口座残高":108702,"現金":16854},"liabilities":{"カード未払い 来月分":28473,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"オミクロン石油":{"cost":41412,"current":55867},"ニュー小売":{"cost":45849,"current":41628},"クシー重工":{"cost":155595,"current":208040},"デルタ輸送":{"cost":124583,"current":149733},"ラムダ機械":{"cost":125469,"current":131464},"エータ情報":{"cost":50779,"current":53935},"ゼータ建設":{"cost":143107,"current":186063},"パイ電力":{"cost":177575,"current":227764},"イプシロン製薬":{"cost":194627,"current":235546},"シグマ不動産":{"cost":89779,"current":107443},"ガンマ化学":{"cost":66165,"current":82312},"シータ海運":{"cost":68121,"current":62326},"楽天証券":{"cost":522686,"current":351563},"SBI":{"cost":2406514,"current":2437120},"マネックス":{"cost":261444,"current":339740},"IDECO":{"cost":118981,"current":132263}}},{"date":"2025-02-28","net_assets":8314299,"total_assets":8341515,"liab_total":27216,"cash_total":3098861,"stocks_total":1472661,"ideco":87508,"crypto":160389,"tsumitate":2239065,"other":465990,"assets":{"みずほ":435810,"UFJ":165259,"楽天銀行":170422,"SMBC":3835,"住信SBI":404361,"あおぞら":217806,"ゆうちょ":136975,"証券口座残高":68443,"現金":28995},"liabilities":{"カード未払い 来月分":20766,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ロー保険":{"cost":180168,"current":169961},"エータ情報":{"cost":158254,"current":139240},"ニュー小売":{"cost":43868,"current":48950},"クシー重工":{"cost":102082,"current":123952},"オミクロン石油":{"cost":100411,"current":98336},"ゼータ建設":{"cost":117098,"current":123784},"ガンマ化学":{"cost":48851,"current":61402},"パイ電力":{"cost":130832,"current":152571},"イプシロン製薬":{"cost":82431,"current":80972},"シグマ不動産":{"cost":197355,"current":174238},"カッパ繊維":{"cost":64751,"current":91764},"ベータ食品":{"cost":160449,"current":209946},"楽天証券":{"cost":244723,"current":195590},"SBI":{"cost":1743463,"current":1978096},"マネックス":{"cost":125837,"current":258471},"IDECO":{"cost":89204,"current":87508}}},{"date":"2025-03-31","net_assets":8471596,"total_assets":8494710,"liab_total":23114,"cash_total":3249785,"stocks_total":1207202,"ideco":151992,"crypto":147578,"tsumitate":1681777,"other":572554,"assets":{"みずほ":204162,"UFJ":262058,"楽天銀行":225743,"SMBC":327833,"住信SBI":129833,"あおぞら":170721,"ゆうちょ":372877,"証券口座残高":72343,"現金":38428},"liabilities":{"カード未払い 来月分":31502,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ミュー銀行":{"cost":156786,"current":154111},"ガンマ化学":{"cost":162450,"current":145527},"クシー重工":{"cost":137648,"current":160822},"デルタ輸送":{"cost":62963,"current":82842},"シータ海運":{"cost":89686,"current":127796},"エータ情報":{"cost":139725,"current":131147},"カッパ繊維":{"cost":47476,"current":47646},"オミクロン石油":{"cost":59494,"current":56026},"イオタ自動車":{"cost":159055,"current":142387},"ベータ食品":{"cost":191719,"current":235194},"ニュー小売":{"cost":108872,"current":129366},"イプシロン製薬":{"cost":128509,"current":161751},"楽天証券":{"cost":541024,"current":525084},"SBI":{"cost":2966329,"current":1634266},"マネックス":{"cost":294194,"current":202196},"IDECO":{"cost":97590,"current":151992}}},{"date":"2025-04-30","net_assets":8579502,"total_assets":8601006,"liab_total":21504,"cash_total":3228269,"stocks_total":1677803,"ideco":187276,"crypto":115989,"tsumitate":1144113,"other":580871,"assets":{"みずほ":238707,"UFJ":172359,"楽天銀行":363586,"SMBC":479639,"住信SBI":36558,"あおぞら":230602,"ゆうちょ":131863,"証券口座残高":125442,"現金":38626},"liabilities":{"カード未払い 来月分":38473,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"ベータ食品":{"cost":115773,"current":110393},"オミクロン石油":{"cost":72116,"current":80240},"エータ情報":{"cost":104701,"current":121835},"ラムダ機械":{"cost":56986,"current":61186},"パイ電力":{"cost":78091,"current":85530},"イオタ自動車":{"cost":87522,"current":105790},"ガンマ化学":{"cost":164168,"current":203302},"アルファ電機":{"cost":41205,"current":37360},"シータ海運":{"cost":145324,"current":148301},"ウプシロン観光":{"cost":153034,"current":190364},"ゼータ建設":{"cost":184078,"current":252917},"ロー保険":{"cost":86671,"current":103974},"楽天証券":{"cost":170714,"current":340387},"SBI":{"cost":2919241,"current":2835135},"マネックス":{"cost":178391,"current":274710},"IDECO":{"cost":117520,"current":187276}}},{"date":"2025-05-31","net_assets":8599772,"total_assets":8647188,"liab_total":47416,"cash_total":2797814,"stocks_total":1676950,"ideco":225861,"crypto":143626,"tsumitate":2315167,"other":725188,"assets":{"みずほ":295023,"UFJ":323726,"楽天銀行":185102,"SMBC":144932,"住信SBI":134728,"あおぞら":62624,"ゆうちょ":71541,"証券口座残高":173196,"現金":24588},"liabilities":{"カード未払い 来月分":25663,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"イプシロン製薬":{"cost":178986,"current":218509},"ウプシロン観光":{"cost":131531,"current":123974},"ガンマ化学":{"cost":60743,"current":76882},"カッパ繊維":{"cost":136205,"current":189542},"デルタ輸送":{"cost":152601,"current":133711},"イオタ自動車":{"cost":91930,"current":117831},"ニュー小売":{"cost":194830,"current":236982},"オミクロン石油":{"cost":157906,"current":208480},"ミュー銀行":{"cost":69780,"current":69326},"クシー重工":{"cost":194151,"current":256400},"アルファ電機":{"cost":183675,"current":177505},"ゼータ建設":{"cost":145312,"current":173248},"楽天証券":{"cost":320298,"current":604746},"SBI":{"cost":2445310,"current":2209301},"マネックス":{"cost":183732,"current":162135},"IDECO":{"cost":87987,"current":225861}}},{"date":"2025-06-30","net_assets":8782336,"total_assets":8822972,"liab_total":40636,"cash_total":3728983,"stocks_total":933224,"ideco":172237,"crypto":120424,"tsumitate":2530830,"other":726159,"assets":{"みずほ":93859,"UFJ":61895,"楽天銀行":115406,"SMBC":311283,"住信SBI":323543,"あおぞら":469377,"ゆうちょ":44080,"証券口座残高":168365,"現金":34501},"liabilities":{"カード未払い 来月分":42115,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"アルファ電機":{"cost":188240,"current":254783},"クシー重工":{"cost":140493,"current":186129},"ベータ食品":{"cost":53391,"current":54572},"ニュー小売":{"cost":171059,"current":216841},"ミュー銀行":{"cost":53594,"current":68242},"デルタ輸送":{"cost":106262,"current":90657},"エータ情報":{"cost":43468,"current":43622},"シグマ不動産":{"cost":171943,"current":202769},"ゼータ建設":{"cost":153629,"current":179233},"オミクロン石油":{"cost":48901,"current":50018},"ウプシロン観光":{"cost":81195,"current":71341},"パイ電力":{"cost":101370,"current":134451},"楽天証券":{"cost":328556,"current":189840},"SBI":{"cost":2762867,"current":2509564},"マネックス":{"cost":103287,"current":253997},"IDECO":{"cost":89677,"current":172237}}},{"date":"2025-07-31","net_assets":8711304,"total_assets":8770290,"liab_total":58986,"cash_total":2925672,"stocks_total":1513825,"ideco":129025,"crypto":123401,"tsumitate":2087113,"other":393200,"assets":{"みずほ":40533,"UFJ":304024,"楽天銀行":262386,"SMBC":458345,"住信SBI":206632,"あおぞら":129752,"ゆうちょ":143827,"証券口座残高":132637,"現金":39431},"liabilities":{"カード未払い 来月分":26341,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"アルファ電機":{"cost":37537,"current":44203},"ミュー銀行":{"cost":168296,"current":160731},"ガンマ化学":{"cost":162454,"current":183373},"タウ精密":{"cost":148216,"current":182163},"シータ海運":{"cost":167954,"current":149119},"ロー保険":{"cost":161952,"current":182132},"ラムダ機械":{"cost":79885,"current":70001},"クシー重工":{"cost":63909,"current":55929},"ベータ食品":{"cost":188673,"current":218715},"カッパ繊維":{"cost":198150,"current":232988},"ゼータ建設":{"cost":73063,"current":95126},"シグマ不動産":{"cost":62487,"current":66497},"楽天証券":{"cost":490420,"current":665452},"SBI":{"cost":1329811,"current":998320},"マネックス":{"cost":173603,"current":351266},"IDECO":{"cost":109732,"current":129025}}},{"date":"2025-08-31","net_assets":9053354,"total_assets":9105399,"liab_total":52045,"cash_total":2963424,"stocks_total":1963191,"ideco":180379,"crypto":135576,"tsumitate":2592662,"other":644205,"assets":{"みずほ":431202,"UFJ":40893,"楽天銀行":300578,"SMBC":360486,"住信SBI":200127,"あおぞら":105402,"ゆうちょ":25336,"証券口座残高":135919,"現金":19194},"liabilities":{"カード未払い 来月分":35065,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"クシー重工":{"cost":42756,"current":52697},"ゼータ建設":{"cost":91762,"current":122103},"オミクロン石油":{"cost":145499,"current":206852},"ミュー銀行":{"cost":54272,"current":65915},"シグマ不動産":{"cost":162823,"current":141799},"アルファ電機":{"cost":41429,"current":54566},"ロー保険":{"cost":92275,"current":99630},"タウ精密":{"cost":126431,"current":153367},"カッパ繊維":{"cost":145440,"current":206422},"エータ情報":{"cost":93242,"current":121946},"イプシロン製薬":{"cost":127566,"current":148955},"パイ電力":{"cost":97665,"current":121078},"楽天証券":{"cost":224805,"current":191472},"SBI":{"cost":2339187,"current":2196940},"マネックス":{"cost":177397,"current":266034},"IDECO":{"cost":90471,"current":180379}}},{"date":"2025-09-30","net_assets":9046514,"total_assets":9100627,"liab_total":54113,"cash_total":3069071,"stocks_total":1986287,"ideco":142134,"crypto":173374,"tsumitate":1885438,"other":428427,"assets":{"みずほ":278018,"UFJ":501752,"楽天銀行":204353,"SMBC":37519,"住信SBI":279557,"あおぞら":299108,"ゆうちょ":94559,"証券口座残高":95165,"現金":11948},"liabilities":{"カード未払い 来月分":33554,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"カッパ繊維":{"cost":91352,"current":109016},"ゼータ建設":{"cost":109458,"current":157598},"タウ精密":{"cost":52061,"current":71872},"ミュー銀行":{"cost":41177,"current":44837},"シータ海運":{"cost":151878,"current":172715},"ベータ食品":{"cost":99835,"current":109385},"デルタ輸送":{"cost":127733,"current":118178},"ニュー小売":{"cost":83894,"current":75043},"ガンマ化学":{"cost":109191,"current":126706},"クシー重工":{"cost":51816,"current":69818},"パイ電力":{"cost":123721,"current":148795},"アルファ電機":{"cost":160522,"current":148871},"楽天証券":{"cost":351431,"current":666973},"SBI":{"cost":2578477,"current":2257926},"マネックス":{"cost":160824,"current":162111},"IDECO":{"cost":117389,"current":142134}}},{"date":"2025-10-31","net_assets":9020523,"total_assets":9051501,"liab_total":30978,"cash_total":3964489,"stocks_total":1463739,"ideco":141450,"crypto":97318,"tsumitate":1401197,"other":878428,"assets":{"みずほ":495953,"UFJ":426618,"楽天銀行":57746,"SMBC":382922,"住信SBI":308296,"あおぞら":266698,"ゆうちょ":70208,"証券口座残高":131182,"現金":37060},"liabilities":{"カード未払い 来月分":28440,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"タウ精密":{"cost":135078,"current":117270},"ベータ食品":{"cost":181129,"current":213251},"アルファ電機":{"cost":139124,"current":143472},"ガンマ化学":{"cost":71629,"current":95582},"ウプシロン観光":{"cost":99035,"current":111129},"ラムダ機械":{"cost":147064,"current":138953},"ニュー小売":{"cost":100655,"current":113605},"カッパ繊維":{"cost":87832,"current":82228},"イプシロン製薬":{"cost":176452,"current":183790},"オミクロン石油":{"cost":197963,"current":209290},"デルタ輸送":{"cost":97781,"current":127741},"エータ情報":{"cost":117546,"current":107402},"楽天証券":{"cost":220868,"current":197188},"SBI":{"cost":1623990,"current":1050808},"マネックス":{"cost":110121,"current":365800},"IDECO":{"cost":114566,"current":141450}}},{"date":"2025-11-30","net_assets":9100497,"total_assets":9126870,"liab_total":26373,"cash_total":4027308,"stocks_total":1895426,"ideco":239066,"crypto":175981,"tsumitate":2273332,"other":467674,"assets":{"みずほ":802218,"UFJ":301637,"楽天銀行":514107,"SMBC":240169,"住信SBI":39976,"あおぞら":168065,"ゆうちょ":179880,"証券口座残高":81294,"現金":27500},"liabilities":{"カード未払い 来月分":21216,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"カッパ繊維":{"cost":92209,"current":100539},"パイ電力":{"cost":126947,"current":122731},"タウ精密":{"cost":124047,"current":110912},"ウプシロン観光":{"cost":115723,"current":151440},"アルファ電機":{"cost":77552,"current":111942},"クシー重工":{"cost":145667,"current":134201},"ベータ食品":{"cost":195764,"current":212666},"エータ情報":{"cost":165132,"current":173958},"ガンマ化学":{"cost":189621,"current":247072},"イプシロン製薬":{"cost":63839,"current":73764},"ゼータ建設":{"cost":115013,"current":100887},"ニュー小売":{"cost":53296,"current":55951},"楽天証券":{"cost":336872,"current":407902},"SBI":{"cost":2015651,"current":2249618},"マネックス":{"cost":165593,"current":279397},"IDECO":{"cost":86500,"current":239066}}},{"date":"2025-12-31","net_assets":9495335,"total_assets":9527326,"liab_total":31991,"cash_total":3777850,"stocks_total":1290493,"ideco":158832,"crypto":173602,"tsumitate":2049294,"other":783596,"assets":{"みずほ":616539,"UFJ":233530,"楽天銀行":394877,"SMBC":496416,"住信SBI":238156,"あおぞら":286768,"ゆうちょ":219548,"証券口座残高":139445,"現金":10799},"liabilities":{"カード未払い 来月分":31864,"光熱費未払い":1440,"携帯代未払い":720,"駐車場未払い":2400},"stocks":{"タウ精密":{"cost":169682,"current":168887},"ウプシロン観光":{"cost":127336,"current":161756},"シータ海運":{"cost":62433,"current":69589},"ベータ食品":{"cost":101192,"current":111086},"パイ電力":{"cost":64661,"current":74430},"ガンマ化学":{"cost":133951,"current":151761},"イオタ自動車":{"cost":174224,"current":224128},"ラムダ機械":{"cost":149981,"current":174159},"ミュー銀行":{"cost":125350,"current":181616},"カッパ繊維":{"cost":111323,"current":119794},"エータ情報":{"cost":192636,"current":216869},"オミクロン石油":{"cost":120631,"current":142074},"楽天証券":{"cost":437934,"current":666622},"SBI":{"cost":2201864,"current":3171688},"マネックス":{"cost":152872,"current":245886},"IDECO":{"cost":118293,"current":158832}}}];
+const SAMPLE_CRYPTO_COST = {
+  "2023-03": 84000,
+  "2023-04": 84000,
+  "2023-05": 84000,
+  "2023-06": 84000,
+  "2023-07": 84000,
+  "2023-08": 120000,
+  "2023-09": 120000,
+  "2023-10": 120000,
+  "2023-11": 120000,
+  "2023-12": 120000,
+  "2024-01": 120000,
+  "2024-02": 120000,
+  "2024-03": 120000,
+  "2024-04": 120000,
+  "2024-05": 120000,
+  "2024-06": 120000,
+  "2024-07": 120000,
+  "2024-08": 120000,
+  "2024-09": 120000,
+  "2024-10": 120000,
+  "2024-11": 120000,
+  "2024-12": 120000,
+  "2025-01": 120000,
+  "2025-02": 132000,
+  "2025-03": 144000,
+  "2025-04": 149615,
+  "2025-05": 2047055,
+  "2025-06": 2047055,
+  "2025-07": 2047055,
+  "2025-08": 2047055,
+  "2025-09": 2047055,
+  "2025-10": 2047055,
+  "2025-11": 2047055,
+  "2025-12": 2047055,
+  "2026-01": 2047055,
+  "2026-02": 2047055,
+  "2026-03": 2047055
+};
+
+let isSampleMode = false;
+function activeD(){ return isSampleMode ? SAMPLE_D : D; }
+function activeCryptoCost(){ return isSampleMode ? SAMPLE_CRYPTO_COST : CRYPTO_COST; }
+// ─────────────────────────────────────────────────────────────────
+function prev(){return activeD()[activeD().length-2];}
+
+function updateKPIs(){
+  const L=latest(),P=prev(),F=activeD()[0];
+  const mom=(L.net_assets-P.net_assets)/P.net_assets;
+  const ret=(L.net_assets-F.net_assets)/F.net_assets;
+  const momAbs=L.net_assets-P.net_assets;
+
+  // Stock PnL from latest data
+  let cost=0,cur=0;
+  for(const [n,v] of Object.entries(L.stocks)){
+    if(n.includes('小計')||n==='合計'||n.includes('IDECO')||n.includes('証券')||n.includes('SBI')||n.includes('マネックス')||n.includes('au株')||n.includes('楽天証券'))continue;
+    if(v.cost>0&&v.current>0){
+      cost+=v.cost;
+      const lp=liveP[n];
+      cur+=lp?lp:v.current;
+    }
+  }
+  const pnl=cur-cost, pnlR=cost>0?pnl/cost:0;
+
+  // ── 含み益総額（個別株+投資信託+仮想通貨） ──
+  // 投資信託: 楽天証券, au株コム, SBI, マネックス, IDECO（全部含む）
+  const FUND_NAMES=['楽天証券','au株コム','SBI','マネックス','IDECO'];
+  let fundCost=0, fundCur=0;
+  for(const [n,v] of Object.entries(L.stocks)){
+    if(n.includes('小計')||n==='合計')continue;
+    if(FUND_NAMES.some(x=>n.includes(x))&&v.cost>0&&v.current>0){
+      fundCost+=v.cost; fundCur+=v.current;
+    }
+  }
+  const fundPnl=fundCur-fundCost;
+
+  // 仮想通貨: current value - estimated cost（コストデータなしのため純資産比で近似）
+  // cryptoはデータ上cost情報がないため、3年前の値をベース原価として差分を使用
+  const cryptoPnl=L.crypto - activeD()[0].crypto; // 開始時比の増分を含み益とする
+
+  const totalPnl = pnl + fundPnl + cryptoPnl;
+  const totalCost = cost + fundCost;
+  const totalPnlR = totalCost > 0 ? totalPnl / totalCost : 0;
+
+  document.getElementById('kNet').textContent=fmtN(L.net_assets);
+  document.getElementById('kNetS').innerHTML=`<span class="${pc(mom)}">${pct(mom)}</span> 前月比`;
+  document.getElementById('kTotal').textContent=fmtN(L.total_assets);
+  document.getElementById('kTotalS').textContent=`純資産+負債 ${fmt(L.liab_total)}`;
+  document.getElementById('kRet').textContent=pct(ret,1);
+  document.getElementById('kRetS').textContent=`+${fmtN(L.net_assets-F.net_assets)} 増加`;
+  document.getElementById('kMom').innerHTML=`<span class="${pc(mom)}">${momAbs>=0?'+':''}${fmt(momAbs)}</span>`;
+  document.getElementById('kMomS').textContent=`${P.date.slice(0,7)}→${L.date.slice(0,7)}`;
+  document.getElementById('kLiab').textContent=fmt(L.liab_total);
+  document.getElementById('kLiabS').textContent=`純資産比 ${(L.liab_total/L.net_assets*100).toFixed(1)}%`;
+
+  // 為替レートカード（最新月のFX_MAP値）
+  const now=new Date();
+  const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const fxRate=FX_MAP[ym]||FX_MAP[Object.keys(FX_MAP).sort().pop()];
+  const prevYm=Object.keys(FX_MAP).sort().slice(-2,-1)[0];
+  const prevFx=FX_MAP[prevYm];
+  const fxDiff=fxRate&&prevFx?fxRate-prevFx:null;
+  document.getElementById('kFx').textContent=fxRate?`${fxRate.toFixed(2)}円`:'—';
+  document.getElementById('kFxS').innerHTML=fxDiff!==null
+    ?`<span class="${fxDiff>=0?'pos':'neg'}">${fxDiff>=0?'+':''}${fxDiff.toFixed(2)}</span> 前月比 LIVE更新`
+    :'LIVE更新で取得';
+
+  // 含み益総額カード
+  document.getElementById('kPnlAll').innerHTML=`<span class="${pc(totalPnlR)}">${totalPnl>=0?'+':''}${fmtN(Math.round(totalPnl))}</span>`;
+  document.getElementById('kPnlAllS').innerHTML=`<span class="${pc(totalPnlR)}">${pct(totalPnlR)}</span> 対取得コスト比`;
+  document.getElementById('kPnlBreak').innerHTML=
+    `個別株 <span class="${pc(pnl)}">${pnl>=0?'+':''}${fmt(Math.round(pnl))}</span>　`+
+    `投信 <span class="${pc(fundPnl)}">${fundPnl>=0?'+':''}${fmt(Math.round(fundPnl))}</span>　`+
+    `仮想通貨 <span class="${pc(cryptoPnl)}">${cryptoPnl>=0?'+':''}${fmt(Math.round(cryptoPnl))}</span>`;
+}
+
+// Stock sort state
+let stkSortCol='current', stkSortAsc=false;
+
+// Full ticker map including all known stocks
+const TICKER_MAP={
+  'JR東':'9020','JAL':'9201','TBS':'9401','JR東海':'9022','META':'META',
+  'マルハニチロ':'1334','Dena':'2432','佐藤食品':'2814','丸八':'2662',
+  '光ビ':'9708','楽天':'4755','WOWOW':'4839','カナレ電気':'5819',
+  'ｺﾝバム':'5979','キクカワ':'5932','ユニバーサル':'6425','日産':'7201',
+  'TOYOTA':'7203','マツダ':'7261','SBI インシュ':'7326','ノーリツ鋼機':'7744',
+  '三菱商事':'8058','三菱UFJ':'8306','三井住友':'8316','岩手銀':'8345',
+  '八十二銀行':'8359','百五銀行':'8368','みずほ':'8411','テーオーシー':'8841',
+  '日神グループ':'8881','京成':'9009','川崎船':'9107','飯野海運':'9119',
+  '栗林商船':'9171','東京汽船':'9133','日テレ':'9404','関西電力':'9503',
+  '九州電力':'9508','北海道電力':'9509','H.I.S':'9603','セレスポ':'9625',
+  'ソフトバンク':'9434','アステラス':'4503','小林製薬':'4967','JFE':'5411',
+  'カネソウ':'5979','藤商事':'6257','郵船':'9101','栗林商船':'9171',
+  '三井住友':'8316','東京汽船':'9133',
+};
+
+function getStkEntries(){
+  const L=latest();
+  return Object.entries(L.stocks).filter(([n,v])=>
+    !n.includes('小計')&&n!=='合計'&&
+    !['楽天証券','au株コム','SBI','マネックス','IDECO'].some(x=>n.includes(x))
+    &&v.cost>0&&v.current>0&&v.cost<50000000
+  ).map(([n,v])=>{
+    const lp=liveP[n];
+    const cv=lp?lp:v.current;
+    const pnl=cv-v.cost, r=v.cost>0?pnl/v.cost:0;
+    return {n, cost:v.cost, current:cv, pnl, rate:r, live:!!lp,
+            code:TICKER_MAP[n]||TICKERS[n]||'—'};
+  });
+}
+
+function sortStocks(col){
+  if(stkSortCol===col) stkSortAsc=!stkSortAsc;
+  else{ stkSortCol=col; stkSortAsc=col==='name'||col==='code'; }
+  renderStockRows();
+}
+
+function renderStockRows(){
+  const entries=getStkEntries();
+  const col=stkSortCol, asc=stkSortAsc;
+  entries.sort((a,b)=>{
+    let va,vb;
+    if(col==='name'){ va=a.n; vb=b.n; return asc?va.localeCompare(vb,'ja'):vb.localeCompare(va,'ja'); }
+    if(col==='code'){ va=a.code; vb=b.code; return asc?va.localeCompare(vb):vb.localeCompare(va); }
+    va=a[col]; vb=b[col];
+    return asc?va-vb:vb-va;
+  });
+  // Update sort icons
+  ['name','code','cost','current','pnl','rate'].forEach(c=>{
+    const el=document.getElementById('si-'+c);
+    if(!el)return;
+    el.textContent= c===col ? (asc?'▲':'▼') : '';
+  });
+  let tc=0,tv=0,rows='';
+  for(const e of entries){
+    tc+=e.cost; tv+=e.current;
+    const dc=dayChange[e.code];
+    const dcHtml=dc!=null
+      ? `<span class="pnl-badge ${dc>=0?'pos':'neg'}">${dc>=0?'+':''}${dc.toFixed(2)}%</span>`
+      : `<span style="color:var(--td);font-size:.7rem">—</span>`;
+    rows+=`<tr>
+      <td><div class="stk-name">${e.n}</div></td>
+      <td style="text-align:right;font-family:'Space Mono',monospace;font-size:.72rem;color:var(--td)">${e.code}</td>
+      <td>${fmt(e.cost,'円')}</td>
+      <td class="${e.live?'live-price':''}">${fmt(e.current,'円')}${e.live?' ★':''}</td>
+      <td class="${pc(e.rate)}">${e.pnl>=0?'+':''}${fmt(Math.round(e.pnl),'円')}</td>
+      <td><span class="pnl-badge ${pc(e.rate)}">${pct(e.rate)}</span></td>
+      <td style="text-align:right">${dcHtml}</td>
+    </tr>`;
+  }
+  document.getElementById('stkBody').innerHTML=rows;
+}
+
+let fundSortCol='cost', fundSortAsc=false;
+
+function sortFund(col){
+  if(fundSortCol===col) fundSortAsc=!fundSortAsc;
+  else{ fundSortCol=col; fundSortAsc=col==='name'; }
+  renderFundRows();
+  updatePosSummary();
+}
+
+function renderFundRows(){
+  const L=latest();
+  const funds=['楽天証券','au株コム','SBI','マネックス','IDECO'];
+  let rows=funds.map(fn=>{
+    const v=L.stocks[fn];
+    if(!v||!v.cost)return null;
+    const pnl=v.current-v.cost, rate=v.cost>0?pnl/v.cost:0;
+    return {name:fn, cost:v.cost, current:v.current, pnl, rate};
+  }).filter(Boolean);
+
+  // Sort
+  const col=fundSortCol, asc=fundSortAsc;
+  rows.sort((a,b)=>{
+    if(col==='name') return asc?a.name.localeCompare(b.name,'ja'):b.name.localeCompare(a.name,'ja');
+    return asc?a[col]-b[col]:b[col]-a[col];
+  });
+
+  // Update sort icons
+  ['name','cost','current','pnl','rate'].forEach(c=>{
+    const el=document.getElementById('fi-'+c);
+    if(el) el.textContent=c===col?(asc?'▲':'▼'):'';
+  });
+
+  let fc=0,fv=0,fr='';
+  for(const r of rows){
+    fc+=r.cost; fv+=r.current;
+    fr+=`<tr>
+      <td><div class="stk-name">${r.name}</div></td>
+      <td>${fmt(r.cost,'円')}</td>
+      <td>${fmt(r.current,'円')}</td>
+      <td class="${pc(r.rate)}">${r.pnl>=0?'+':''}${fmt(Math.round(r.pnl),'円')}</td>
+      <td><span class="pnl-badge ${pc(r.rate)}">${pct(r.rate)}</span></td>
+    </tr>`;
+  }
+  document.getElementById('fundBody').innerHTML=fr;
+}
+
+let cryptoSortCol='current', cryptoSortAsc=false;
+let currentPosTab='indiv';
+
+// 仮想通貨コストデータ（固定）
+function sortCrypto(col){
+  if(cryptoSortCol===col) cryptoSortAsc=!cryptoSortAsc;
+  else{ cryptoSortCol=col; cryptoSortAsc=col==='name'; }
+  renderCryptoRows();
+  updatePosSummary();
+}
+
+function renderCryptoRows(){
+  const L=latest();
+  const cost=getCryptoCost(L.date);
+  const cur=L.crypto;
+  const pnl=cost!=null ? cur-cost : null;
+  const rate=cost!=null&&cost>0 ? pnl/cost : null;
+
+  ['current','pnl','rate'].forEach(c=>{
+    const el=document.getElementById('ci-'+c);
+    if(el) el.textContent=c===cryptoSortCol?(cryptoSortAsc?'▲':'▼'):'';
+  });
+
+  let html=`<tr>
+    <td><div class="stk-name">🪙 仮想通貨（合計）</div></td>
+    <td style="text-align:right">${cost!=null?fmt(cost,'円'):'—'}</td>
+    <td style="text-align:right">${fmt(cur,'円')}</td>
+    <td class="${pnl!=null?pc(pnl):''}" style="text-align:right">${pnl!=null?(pnl>=0?'+':'')+fmt(Math.round(pnl),'円'):'—'}</td>
+    <td>${rate!=null?`<span class="pnl-badge ${pc(rate)}">${pct(rate)}</span>`:'—'}</td>
+  </tr>`;
+  document.getElementById('cryptoBody').innerHTML=html;
+}
+
+function updatePosSummary(){
+  const L=latest(), F=activeD()[0];
+  let label='', cost=0, cur=0, pnl=0, rate=null, showRate=true;
+  let countText='';
+
+  if(currentPosTab==='indiv'){
+    const entries=getStkEntries();
+    for(const e of entries){cost+=e.cost;cur+=e.current;}
+    pnl=cur-cost; rate=cost>0?pnl/cost:0;
+    label='個別株合計';
+    countText=`${entries.length}銘柄`;
+  } else if(currentPosTab==='fund'){
+    const funds=['楽天証券','au株コム','SBI','マネックス','IDECO'];
+    for(const fn of funds){
+      const v=L.stocks[fn];
+      if(v&&v.cost){cost+=v.cost;cur+=v.current;}
+    }
+    pnl=cur-cost; rate=cost>0?pnl/cost:0;
+    label='投資信託合計';
+  } else {
+    const lc=getCryptoCost(latest().date);
+    const tv=latest().crypto;
+    cost=lc!=null?lc:0; cur=tv; pnl=tv-cost;
+    rate=cost>0?pnl/cost:null;
+    showRate=lc!=null;
+    label='仮想通貨合計';
+  }
+
+  document.getElementById('sumCostLabel').textContent=showRate?'取得コスト':'（コストデータなし）';
+  document.getElementById('sumCost').textContent=showRate?fmt(cost,'円'):'—';
+  document.getElementById('sumCount').textContent=countText;
+  document.getElementById('sumCur').textContent=fmt(cur,'円');
+  document.getElementById('sumPnl').innerHTML=`<span class="${pc(pnl)}">${pnl>=0?'+':''}${fmt(Math.round(pnl),'円')}</span>`;
+  document.getElementById('sumRate').innerHTML=showRate&&rate!==null
+    ?`<span class="${pc(rate)}">${pct(rate)}</span>`:'—';
+}
+
+function renderStocks(){
+  renderStockRows();
+  renderFundRows();
+  renderCryptoRows();
+  updatePosSummary();
+}
+
+function renderAlloc(){
+  const L=latest();
+  const total=L.net_assets;
+  const OVERSEAS=new Set(['META']);
+  const FUND_KEYS=new Set(['楽天証券','au株コム','SBI','マネックス','IDECO','個別株小計','投資信託小計','合計']);
+  let jpStock=0,osStock=0;
+  for(const [n,v] of Object.entries(L.stocks)){
+    if(n.includes('小計')||n==='合計')continue;
+    if(FUND_KEYS.has(n))continue;
+    if(v.cost>0&&v.current>0&&v.cost<50000000){
+      if(OVERSEAS.has(n))osStock+=v.current;
+      else jpStock+=v.current;
+    }
+  }
+  const trust=L.tsumitate+L.ideco;
+  const cats=[
+    {l:'投資信託（NISA/iDeCo込み）',v:trust,      c:'#10b981'},
+    {l:'現金',                        v:L.cash_total,c:'#00d4ff'},
+    {l:'個別株（日本株）',             v:jpStock,     c:'#7c3aed'},
+    {l:'個別株（海外株）',             v:osStock,     c:'#6366f1'},
+    {l:'仮想通貨',                    v:L.crypto,    c:'#f59e0b'},
+    {l:'その他',                      v:L.other,     c:'#64748b'},
+  ].filter(c=>c.v>0).sort((a,b)=>b.v-a.v);
+  const ctx=document.getElementById('cAlloc').getContext('2d');
+  if(allocCh)allocCh.destroy();
+  allocCh=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:cats.map(c=>c.l),datasets:[{data:cats.map(c=>c.v),backgroundColor:cats.map(c=>c.c),borderWidth:0,hoverOffset:5}]},
+    options:{cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)+' ('+((ctx.raw/total)*100).toFixed(1)+'%)'}}},animation:{duration:800}}
+  });
+  let lg='';
+  cats.forEach(c=>{
+    lg+=`<div class="leg-item"><div class="leg-dot" style="background:${c.c}"></div><div>${c.l}</div><div class="leg-pct">${((c.v/total)*100).toFixed(1)}%</div></div>`;
+  });
+  document.getElementById('allocLegend').innerHTML=lg;
+}
+
+// セクター分類マップ
+const SECTOR_MAP={
+  // 銀行・金融
+  '三菱UFJ':'銀行・金融','三井住友':'銀行・金融','みずほ':'銀行・金融',
+  '岩手銀':'銀行・金融','八十二銀行':'銀行・金融','百五銀行':'銀行・金融',
+  'SBI インシュ':'銀行・金融',
+  // 運輸・鉄道
+  'JR東':'運輸・鉄道','JAL':'運輸・鉄道','JR東海':'運輸・鉄道',
+  'H.I.S':'運輸・鉄道',
+  // 海運
+  '川崎船':'海運','飯野海運':'海運','栗林商船':'海運','東京汽船':'海運',
+  '郵船':'海運',
+  // メディア・通信
+  'TBS':'メディア・通信','日テレ':'メディア・通信','WOWOW':'メディア・通信',
+  'ソフトバンク':'メディア・通信',
+  // 自動車・機械
+  'TOYOTA':'自動車・機械','日産':'自動車・機械','マツダ':'自動車・機械',
+  'カナレ電気':'自動車・機械','JFE':'自動車・機械',
+  // 商社・不動産
+  '三菱商事':'商社・不動産','テーオーシー':'商社・不動産',
+  '日神グループ':'商社・不動産','セレスポ':'商社・不動産',
+  // 食品・消費
+  'マルハニチロ':'食品・消費','佐藤食品':'食品・消費','丸八':'食品・消費',
+  '小林製薬':'食品・消費','アステラス':'食品・消費',
+  // エネルギー
+  '関西電力':'エネルギー','九州電力':'エネルギー','北海道電力':'エネルギー',
+  '光ビ':'エネルギー',
+  // その他・小型株
+  'Dena':'その他・小型株','楽天':'その他・小型株','ノーリツ鋼機':'その他・小型株',
+  'ｺﾝバム':'その他・小型株','キクカワ':'その他・小型株','カネソウ':'その他・小型株',
+  '藤商事':'その他・小型株','ユニバーサル':'その他・小型株','京成':'その他・小型株',
+  // 海外株
+  'META':'海外株（米国）',
+};
+const SECTOR_COLORS={
+  '銀行・金融':'#3b82f6',
+  '運輸・鉄道':'#10b981',
+  '海運':'#06b6d4',
+  'メディア・通信':'#8b5cf6',
+  '自動車・機械':'#f59e0b',
+  '商社・不動産':'#ec4899',
+  '食品・消費':'#84cc16',
+  'エネルギー':'#f97316',
+  'その他・小型株':'#64748b',
+  '海外株（米国）':'#00d4ff',
+};
+let sectorCh=null;
+function renderSector(){
+  const L=latest();
+  const FUND_KEYS=new Set(['楽天証券','au株コム','SBI','マネックス','IDECO','個別株小計','投資信託小計','合計']);
+  const map={};
+  for(const [n,v] of Object.entries(L.stocks)){
+    if(n.includes('小計')||n==='合計')continue;
+    if(FUND_KEYS.has(n))continue;
+    if(!(v.cost>0&&v.current>0&&v.cost<50000000))continue;
+    const sec=SECTOR_MAP[n]||'その他・小型株';
+    map[sec]=(map[sec]||0)+v.current;
+  }
+  const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const total=entries.reduce((s,[,v])=>s+v,0);
+  const ctx=document.getElementById('cSector').getContext('2d');
+  if(sectorCh)sectorCh.destroy();
+  sectorCh=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:entries.map(e=>e[0]),
+      datasets:[{data:entries.map(e=>e[1]),backgroundColor:entries.map(e=>SECTOR_COLORS[e[0]]||'#475569'),borderWidth:0,hoverOffset:5}]
+    },
+    options:{cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)+' ('+((c.raw/total)*100).toFixed(1)+'%)'}}},animation:{duration:800}}
+  });
+  let lg='';
+  entries.forEach(([sec,v])=>{
+    const col=SECTOR_COLORS[sec]||'#475569';
+    lg+=`<div class="leg-item"><div class="leg-dot" style="background:${col}"></div><div>${sec}</div><div class="leg-pct">${((v/total)*100).toFixed(1)}%</div></div>`;
+  });
+  document.getElementById('sectorLegend').innerHTML=lg;
+}
+
+const GC={gridColor:'rgba(26,37,64,.9)',tickColor:'#64748b',tipBg:'rgba(15,22,35,.97)',tipBd:'#1a2540'};
+function tipCfg(){return{backgroundColor:GC.tipBg,borderColor:GC.tipBd,borderWidth:1,titleColor:'#94a3b8',bodyColor:'#e2e8f0'};}
+function scalesCfg(yFmt){return{x:{grid:{color:GC.gridColor},ticks:{color:GC.tickColor,font:{size:9},maxRotation:45}},y:{grid:{color:GC.gridColor},ticks:{color:GC.tickColor,font:{size:9},callback:yFmt}}};}
+
+function getSlice(){return period===999?activeD():activeD().slice(-period);}
+
+// USD/JPY monthly average (x-rates.com + investing.com)
+const FX_MAP={
+  '2023-03':133.63,'2023-04':133.45,'2023-05':137.20,'2023-06':141.40,
+  '2023-07':140.99,'2023-08':144.84,'2023-09':147.84,'2023-10':149.55,
+  '2023-11':149.71,'2023-12':143.74,
+  '2024-01':145.97,'2024-02':149.51,'2024-03':149.72,'2024-04':153.84,
+  '2024-05':155.77,'2024-06':157.98,'2024-07':157.91,'2024-08':146.33,
+  '2024-09':143.15,'2024-10':149.67,'2024-11':153.50,'2024-12':153.80,
+  '2025-01':156.69,'2025-02':151.86,'2025-03':149.18,'2025-04':144.35,
+  '2025-05':144.71,'2025-06':144.58,'2025-07':146.81,'2025-08':147.51,
+  '2025-09':147.95,'2025-10':151.09,'2025-11':155.05,'2025-12':156.00,
+  '2026-01':157.46,'2026-02':154.94,
+};
+
+function calcPnL(d){
+  // 個別株（小計・合計・口座名を除く）
+  const FUND_NAMES=['楽天証券','au株コム','SBI','マネックス','IDECO'];
+  let cost=0,cur=0;
+  for(const [n,v] of Object.entries(d.stocks)){
+    if(n.includes('小計')||n==='合計')continue;
+    if(v.cost>0&&v.current>0){cost+=v.cost;cur+=v.current;}
+  }
+  const stocksPnl=cur-cost;
+  // 仮想通貨: 開始時比の増分
+  const cryptoPnl=d.crypto - activeD()[0].crypto;
+  return (stocksPnl + cryptoPnl)/10000;
+}
+
+function renderNetChart(){
+  const sl=getSlice();
+  const lbls=sl.map(d=>d.date.slice(0,7));
+  const vals=sl.map(d=>d.net_assets/10000);
+  const pnls=sl.map(d=>Math.round(calcPnL(d)));
+  const fxVals=sl.map(d=>FX_MAP[d.date.slice(0,7)]||null);
+  const ctx=document.getElementById('cNet').getContext('2d');
+  if(netCh)netCh.destroy();
+  const gr=ctx.createLinearGradient(0,0,0,300);
+  gr.addColorStop(0,'rgba(0,212,255,.22)');gr.addColorStop(1,'rgba(0,212,255,0)');
+  const grPnl=ctx.createLinearGradient(0,0,0,300);
+  grPnl.addColorStop(0,'rgba(16,185,129,.15)');grPnl.addColorStop(1,'rgba(16,185,129,0)');
+  netCh=new Chart(ctx,{
+    type:'line',
+    data:{labels:lbls,datasets:[
+      {
+        label:'純資産',
+        data:vals,yAxisID:'y',
+        borderColor:'#00d4ff',backgroundColor:gr,
+        borderWidth:2.5,fill:true,tension:.4,
+        pointRadius:sl.length<=12?4:2,
+        pointBackgroundColor:'#00d4ff',pointBorderColor:'#080c14',pointBorderWidth:2
+      },{
+        label:'含み益',
+        data:pnls,yAxisID:'y',
+        borderColor:'#10b981',backgroundColor:grPnl,
+        borderWidth:2,fill:true,tension:.4,
+        pointRadius:sl.length<=12?3:1,
+        pointBackgroundColor:'#10b981',pointBorderColor:'#080c14',pointBorderWidth:2,
+        borderDash:[4,3]
+      },{
+        label:'USD/JPY',
+        data:fxVals,yAxisID:'y2',
+        borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.06)',
+        borderWidth:1.8,fill:false,tension:.4,
+        pointRadius:sl.length<=12?3:1,
+        pointBackgroundColor:'#f59e0b',pointBorderColor:'#080c14',pointBorderWidth:1.5,
+      }
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          display:true,
+          labels:{color:'#94a3b8',font:{size:10},boxWidth:11,
+            filter:item=>item.text!==undefined}
+        },
+        tooltip:{
+          ...tipCfg(),
+          callbacks:{
+            label:c=>{
+              if(c.dataset.label==='USD/JPY') return ` USD/JPY: ${c.raw?.toFixed(2)}円`;
+              return ` ${c.dataset.label}: ${c.raw?.toLocaleString()}万円`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          ticks:{color:'#64748b',font:{size:9},maxRotation:45},
+          grid:{color:'rgba(26,37,64,.6)'}
+        },
+        y:{
+          position:'left',
+          ticks:{color:'#64748b',font:{size:9},callback:v=>v.toLocaleString()+'万'},
+          grid:{color:'rgba(26,37,64,.6)'}
+        },
+        y2:{
+          position:'right',
+          ticks:{color:'#f59e0b',font:{size:9},callback:v=>v.toFixed(0)+'円'},
+          grid:{drawOnChartArea:false},
+          title:{display:true,text:'USD/JPY',color:'#f59e0b',font:{size:9}}
+        }
+      }
+    }
+  });
+  // MoM chips last 6
+  const rc=sl.slice(-7);
+  let mh='';
+  for(let i=1;i<rc.length;i++){
+    const d=rc[i].net_assets-rc[i-1].net_assets;
+    mh+=`<div class="mom-chip ${d>=0?'pos':'neg'}">${rc[i].date.slice(0,7)} ${d>=0?'+':''}${fmt(Math.round(d))}</div>`;
+  }
+  document.getElementById('momSec').innerHTML=mh;
+}
+
+function renderCatChart(){
+  const lbls=activeD().map(d=>d.date.slice(0,7));
+  const ctx=document.getElementById('cCat').getContext('2d');
+  if(catCh)catCh.destroy();
+  catCh=new Chart(ctx,{
+    type:'line',
+    data:{labels:lbls,datasets:[
+      {label:'投資信託（NISA/iDeCo含む）',data:activeD().map(d=>(d.tsumitate+d.ideco)/10000),borderColor:'#10b981',tension:.4,pointRadius:2,borderWidth:2},
+      {label:'個別株',data:activeD().map(d=>d.stocks_total/10000),borderColor:'#7c3aed',tension:.4,pointRadius:2,borderWidth:2},
+      {label:'現金',data:activeD().map(d=>d.cash_total/10000),borderColor:'#00d4ff',tension:.4,pointRadius:2,borderWidth:2},
+      {label:'仮想通貨',data:activeD().map(d=>d.crypto/10000),borderColor:'#f59e0b',tension:.4,pointRadius:2,borderWidth:2},
+      {label:'その他',data:activeD().map(d=>d.other/10000),borderColor:'#64748b',tension:.4,pointRadius:2,borderWidth:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:11}},tooltip:{...tipCfg(),callbacks:{label:c=>' '+c.dataset.label+': '+c.raw.toLocaleString()+'万円'}}},
+      scales:scalesCfg(v=>v.toLocaleString()+'万')}
+  });
+}
+
+function renderBarChart(){
+  const lbls=activeD().map(d=>d.date.slice(0,7));
+  const ctx=document.getElementById('cBar').getContext('2d');
+  if(barCh)barCh.destroy();
+  barCh=new Chart(ctx,{
+    type:'bar',
+    data:{labels:lbls,datasets:[
+      {label:'現金',      data:activeD().map(d=>Math.max(0,d.cash_total)/10000),  backgroundColor:'rgba(0,212,255,.75)',  stack:'assets'},
+      {label:'個別株',    data:activeD().map(d=>d.stocks_total/10000),             backgroundColor:'rgba(124,58,237,.75)', stack:'assets'},
+      {label:'投資信託',  data:activeD().map(d=>(d.tsumitate+d.ideco)/10000),     backgroundColor:'rgba(16,185,129,.75)',  stack:'assets'},
+      {label:'仮想通貨',  data:activeD().map(d=>d.crypto/10000),                  backgroundColor:'rgba(245,158,11,.75)',  stack:'assets'},
+      {label:'その他',    data:activeD().map(d=>d.other/10000),                   backgroundColor:'rgba(100,116,139,.6)',  stack:'assets'},
+      {label:'負債',      data:activeD().map(d=>-(d.liab_total/10000)),           backgroundColor:'rgba(239,68,68,.8)',    stack:'liab'},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:11}},
+        tooltip:{
+          ...tipCfg(),
+          callbacks:{
+            label:c=>{
+              const v=c.raw;
+              return ` ${c.dataset.label}: ${v<0?'−':''}${Math.abs(v).toLocaleString()}万円`;
+            },
+            footer:items=>{
+              const total=items.filter(i=>i.dataset.stack==='assets').reduce((s,i)=>s+i.raw,0);
+              return `総資産: ${Math.round(total).toLocaleString()}万円`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          stacked:true,
+          ticks:{color:'#64748b',font:{size:9},maxRotation:45},
+          grid:{color:'rgba(26,37,64,.6)'}
+        },
+        y:{
+          stacked:true,
+          ticks:{color:'#64748b',font:{size:9},callback:v=>v.toLocaleString()+'万'},
+          grid:{color:'rgba(26,37,64,.6)'}
+        }
+      }
+    }
+  });
+}
+
+let histSortCol='date', histSortAsc=false;
+
+function buildHistRows(){
+  // Enrich data with computed fields
+  return activeD().map((d,i)=>{
+    const pr=i>0?activeD()[i-1]:null;
+    return {
+      ...d,
+      mom_rate: pr?(d.net_assets-pr.net_assets)/pr.net_assets:null,
+      mom_abs:  pr?d.net_assets-pr.net_assets:null,
+      trust:    d.tsumitate+d.ideco,
+    };
+  });
+}
+
+function sortHistory(col){
+  if(histSortCol===col) histSortAsc=!histSortAsc;
+  else{ histSortCol=col; histSortAsc=col==='date'?false:false; }
+  renderHistory();
+}
+
+function renderHistory(){
+  const rows=buildHistRows();
+  const col=histSortCol, asc=histSortAsc;
+  rows.sort((a,b)=>{
+    const va=a[col], vb=b[col];
+    if(va===null&&vb===null)return 0;
+    if(va===null)return 1; if(vb===null)return -1;
+    if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
+    return asc?va-vb:vb-va;
+  });
+  // Update sort icons
+  ['date','net_assets','mom_rate','mom_abs','total_assets','liab_total','cash_total','stocks_total','trust'].forEach(c=>{
+    const el=document.getElementById('hi-'+c);
+    if(!el)return;
+    el.textContent= c===col?(asc?'▲':'▼'):'';
+  });
+  let h='';
+  rows.forEach(d=>{
+    h+=`<tr>
+      <td>${d.date.slice(0,7)}</td>
+      <td style="color:var(--tb)">${fmtN(d.net_assets)}</td>
+      <td class="${d.mom_rate===null?'neu':pc(d.mom_rate)}">${d.mom_rate!==null?pct(d.mom_rate):'—'}</td>
+      <td class="${d.mom_abs===null?'neu':pc(d.mom_abs)}">${d.mom_abs!==null?(d.mom_abs>=0?'+':'')+fmt(Math.round(d.mom_abs)):'—'}</td>
+      <td>${fmtN(d.total_assets)}</td>
+      <td class="neg">${fmt(d.liab_total)}</td>
+      <td>${fmtN(d.cash_total)}</td>
+      <td>${fmtN(d.stocks_total)}</td>
+      <td>${fmtN(d.trust)}</td>
+    </tr>`;
+  });
+  document.getElementById('histBody').innerHTML=h;
+}
+
+function setPeriod(p,el){
+  period=p;
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderNetChart();
+}
+
+function showStkTab(tab,el){
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.stk-section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('stk'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  currentPosTab=tab;
+  updatePosSummary();
+}
+
+async function fetchLiveFX(){
+  // Fetch current month's USD/JPY monthly average via web search
+  try{
+    const now=new Date();
+    const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:300,
+        tools:[{"type":"web_search_20250305","name":"web_search"}],
+        messages:[{role:"user",content:`今月（${ym}）のUSD/JPY月次平均レートを検索して調べてください。数値だけJSONで返してください（例: {"rate":155.42}）。マークダウン不要。`}]
+      })
+    });
+    const data=await res.json();
+    const txt=data.content.map(b=>b.text||'').join('');
+    const m=txt.match(/\{[^{}]*"rate"\s*:\s*([\d.]+)[^{}]*\}/);
+    if(m){
+      const rate=parseFloat(m[1]);
+      if(rate>100&&rate<200){
+        FX_MAP[ym]=rate;
+        const fxBadgeEl=document.getElementById('fxBadge'); if(fxBadgeEl) fxBadgeEl.textContent=`USD/JPY ${rate.toFixed(2)}`;
+        document.getElementById('kFx').textContent=`${rate.toFixed(2)}円`;
+        document.getElementById('kFxS').innerHTML=`<span style="color:var(--ac)">LIVE取得済</span> ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`;
+        renderNetChart();
+      }
+    }
+  }catch(e){console.warn('fx fetch err',e);}
+}
+
+async function fetchLivePrices(){
+  const btn=document.getElementById('refBtn');
+  const btnMob=document.getElementById('refBtnMob');
+  btn.classList.add('spinning');
+  if(btnMob)btnMob.classList.add('spinning');
+  try{
+    const L=latest();
+    const names=Object.keys(L.stocks).filter(n=>!n.includes('小計')&&n!=='合計'&&!['楽天証券','au株コム','SBI','マネックス','IDECO'].some(x=>n.includes(x))&&L.stocks[n].cost>0&&L.stocks[n].current>0&&L.stocks[n].cost<50000000).slice(0,15);
+    const tickerStr=names.map(n=>n+(TICKERS[n]?`(${TICKERS[n]})`:'')).join(', ');
+
+    // Fetch stock prices and FX in parallel
+    const [stockRes] = await Promise.all([
+      fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          tools:[{"type":"web_search_20250305","name":"web_search"}],
+          messages:[{role:"user",content:`以下の株式の現在の株価（円建て）を検索して調べてください。
+
+銘柄一覧: ${tickerStr}
+
+必ずJSON形式だけで回答（他のテキスト・マークダウン不要）:
+{"銘柄名":数値,...}`}]
+        })
+      }),
+      fetchLiveFX()
+    ]);
+
+    const data=await stockRes.json();
+    const txt=data.content.map(b=>b.text||'').join('');
+    const m=txt.match(/\{[^{}]+\}/);
+    if(m){liveP={...liveP,...JSON.parse(m[0])};renderStockRows();updateKPIs();}
+    document.getElementById('updTime').textContent='更新: '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){console.warn('fetch err',e);}
+  btn.classList.remove('spinning');
+  if(btnMob)btnMob.classList.remove('spinning');
+}
+
+
+function toggleSampleMode(){
+  isSampleMode = !isSampleMode;
+  const btn = document.getElementById('sampleBtn');
+  const banner = document.getElementById('sampleBanner');
+  if(isSampleMode){
+    btn.style.background='rgba(245,158,11,.35)';
+    btn.style.borderColor='rgba(245,158,11,.8)';
+    btn.textContent='▶ REAL DATA';
+    banner.style.display='flex';
+  } else {
+    btn.style.background='rgba(245,158,11,.12)';
+    btn.style.borderColor='rgba(245,158,11,.35)';
+    btn.textContent='SAMPLE';
+    banner.style.display='none';
+  }
+  // Re-render everything
+  updateKPIs();
+  renderNetChart();
+  renderAlloc();
+  renderSector();
+  renderCatChart();
+  renderBarChart();
+  renderHistory();
+  renderStocks();
+}
+function init(){
+  Chart.defaults.color='#64748b';
+  histSortCol='date'; histSortAsc=false;
+  updateKPIs();renderNetChart();renderAlloc();renderSector();renderStocks();renderCatChart();renderBarChart();renderHistory();
+  document.getElementById('updTime').textContent='読込: '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  setTimeout(fetchLivePrices,1200);
+
+  // PWA Service Worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+
+  // Mobile: activate AI inline panel when on AI page
+  goPage('home');
+}
+
+
+// ─── 前日比取得 ──────────────────────────────────────────
+async function fetchDayChanges(){
+  const btn=document.getElementById('fetchDayChgBtn');
+  const status=document.getElementById('fetchDayChgStatus');
+  btn.disabled=true;
+  btn.textContent='⏳ 取得中...';
+  status.textContent='';
+
+  // 保有銘柄のティッカー一覧を収集
+  const entries=getStkEntries();
+  const tickers=[...new Set(entries.map(e=>e.code).filter(c=>c&&c!=='—'&&c!=='META'))];
+
+  if(tickers.length===0){
+    status.textContent='銘柄コードなし';
+    btn.disabled=false; btn.textContent='📈 前日比取得';
+    return;
+  }
+
+  let fetched=0, errors=0;
+  const PROXY='https://corsproxy.io/?';
+
+  for(const ticker of tickers){
+    try{
+      // Yahoo Finance Japan (日本株) or US
+      const isUS=!ticker.endsWith('.T')&&ticker===ticker.toUpperCase()&&!/^\d/.test(ticker);
+      const symbol=isUS?ticker:ticker.replace('.T','')+'.T';
+      const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
+      const res=await fetch(PROXY+encodeURIComponent(url));
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json=await res.json();
+      const meta=json?.chart?.result?.[0]?.meta;
+      if(!meta) throw new Error('no meta');
+      const prev=meta.chartPreviousClose||meta.previousClose;
+      const cur=meta.regularMarketPrice;
+      if(prev&&cur){
+        dayChange[ticker]=(cur-prev)/prev*100;
+        fetched++;
+      }
+    }catch(e){
+      errors++;
+    }
+    // 少し待機（レート制限対策）
+    await new Promise(r=>setTimeout(r,120));
+  }
+
+  renderStockRows();
+  const now=new Date();
+  const hm=now.getHours()+':'+(now.getMinutes()+'').padStart(2,'0');
+  status.textContent=`${hm} 更新 (${fetched}件取得${errors?` / ${errors}件失敗`:''}）`;
+  btn.disabled=false;
+  btn.textContent='📈 前日比取得';
+}
+
+// ─── Mobile Page Navigation ─────────────────────────────
+function goPage(pg){
+  document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  const sec=document.getElementById('pg-'+pg);
+  const nav=document.getElementById('bnav-'+pg);
+  if(sec)sec.classList.add('active');
+  if(nav)nav.classList.add('active');
+
+  // Hide floating AI button on AI page (mobile)
+  const isMobile=window.innerWidth<=768;
+  const floatBtn=document.getElementById('aiToggleBtn');
+  if(floatBtn&&isMobile){floatBtn.style.display=pg==='ai'?'none':'flex';}
+
+  // Redraw charts when switching to chart page (canvas sizing fix)
+  if(pg==='charts'){setTimeout(()=>{renderAlloc();renderSector();renderCatChart();renderBarChart();},50);}
+  if(pg==='home'){setTimeout(()=>{renderNetChart();},50);}
+  if(pg==='pos'){setTimeout(()=>{renderStocks();renderHistory();},50);}
+  window.scrollTo(0,0);
+}
+
+// ─── Inline AI Chat (AI Page) ──────────────────────────
+let inlineChatHistory=[];
+
+function sendHintInline(el){
+  document.getElementById('aiInputInline').value=el.textContent;
+  sendAIInline();
+}
+
+function addInlineMsg(t, role){
+  const msgs=document.getElementById('aiInlineMsgs');
+  const d=document.createElement('div');
+  d.className='ai-msg '+role;
+  d.innerHTML=t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  msgs.appendChild(d);
+  msgs.scrollTop=msgs.scrollHeight;
+  return d;
+}
+
+function sendAIInline(){
+  const inp=document.getElementById('aiInputInline');
+  const txt=inp.value.trim();
+  if(!txt)return;
+  inp.value='';
+
+  addInlineMsg(txt,'user');
+
+  // Build full prompt with portfolio context
+  const ctx=buildPortfolioContext();
+  const fullPrompt=`${ctx}\n\n---\n\n質問: ${txt}`;
+
+  // Show instruction message
+  const info=addInlineMsg(
+    `📋 <strong>質問をClaude.aiで開きます</strong><br>` +
+    `ポートフォリオデータをクリップボードにコピーしました。<br>` +
+    `Claude.aiが開いたら貼り付け（長押し→ペースト）してください。`,
+    'ai'
+  );
+
+  // Copy to clipboard then open Claude.ai
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(fullPrompt).catch(()=>{});
+  }
+  setTimeout(()=>{
+    window.open('https://claude.ai/new','_blank');
+  },600);
+}
+// ─── AI Chat ───────────────────────────────────────────
+let chatOpen = false;
+let chatHistory = [];
+
+function toggleChat(){
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('aiPanel');
+  const btn   = document.getElementById('aiToggleBtn');
+  panel.style.display = chatOpen ? 'flex' : 'none';
+  btn.style.transform = chatOpen ? 'scale(0.9)' : 'scale(1)';
+  if(chatOpen) document.getElementById('aiInput').focus();
+}
+
+function sendHint(el){
+  document.getElementById('aiInput').value = el.textContent;
+  sendAI();
+}
+
+function buildPortfolioContext(){
+  const L = latest(), F = activeD()[0];
+  const ret = ((L.net_assets - F.net_assets) / F.net_assets * 100).toFixed(1);
+  const FUND_KEYS = new Set(['楽天証券','au株コム','SBI','マネックス','IDECO','個別株小計','投資信託小計','合計']);
+  const stocks = Object.entries(L.stocks)
+    .filter(([n,v]) => !n.includes('小計') && n !== '合計' && !FUND_KEYS.has(n) && v.cost > 0 && v.current > 0 && v.cost < 50000000)
+    .map(([n,v]) => {
+      const pnl = ((v.current - v.cost) / v.cost * 100).toFixed(1);
+      return `${n}: 評価額${Math.round(v.current/10000)}万円 (${pnl >= 0 ? '+' : ''}${pnl}%)`;
+    }).join(', ');
+  const trust = L.tsumitate + L.ideco;
+  const history = activeD().slice(-13).map(d => `${d.date.slice(0,7)}: ${Math.round(d.net_assets/10000)}万円`).join(', ');
+  return `あなたはファイナンシャルアドバイザーです。以下はユーザーの資産データです。日本語で回答してください。
+
+【直近の資産概要 (${L.date})】
+- 純資産: ${Math.round(L.net_assets/10000)}万円
+- 総資産: ${Math.round(L.total_assets/10000)}万円
+- 負債: ${Math.round(L.liab_total/10000)}万円
+- 現金: ${Math.round(L.cash_total/10000)}万円
+- 投資信託(NISA/iDeCo込み): ${Math.round(trust/10000)}万円 (${(trust/L.net_assets*100).toFixed(1)}%)
+- 個別株: ${Math.round(L.stocks_total/10000)}万円 (${(L.stocks_total/L.net_assets*100).toFixed(1)}%)
+- 仮想通貨: ${Math.round(L.crypto/10000)}万円
+- その他: ${Math.round(L.other/10000)}万円
+
+【運用開始来リターン】
+${F.date} → ${L.date}: +${ret}% (${Math.round(F.net_assets/10000)}万円 → ${Math.round(L.net_assets/10000)}万円)
+
+【直近13ヶ月の純資産推移】
+${history}
+
+【個別株ポジション (評価額・損益率)】
+${stocks}
+
+【投資信託口座】
+楽天証券: ${Math.round((L.stocks['楽天証券']?.current||0)/10000)}万円, SBI: ${Math.round((L.stocks['SBI']?.current||0)/10000)}万円, au株コム: ${Math.round((L.stocks['au株コム']?.current||0)/10000)}万円, マネックス: ${Math.round((L.stocks['マネックス']?.current||0)/10000)}万円, iDeCo: ${Math.round(L.ideco/10000)}万円`;
+}
+
+function sendAI(){
+  const input = document.getElementById('aiInput');
+  const q = input.value.trim();
+  if(!q) return;
+
+  addChatMsg(q, 'user');
+  input.value = '';
+  chatHistory.push({ role: 'user', content: q });
+
+  const ctx = buildPortfolioContext();
+  const fullPrompt = ctx + '\n\n---\n\n質問: ' + q;
+
+  addChatMsg(
+    '📋 <strong>Claude.aiで回答します</strong><br>' +
+    'ポートフォリオデータをクリップボードにコピーしました。<br>' +
+    'Claude.aiが開いたら貼り付けてください。',
+    'ai'
+  );
+
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(fullPrompt).catch(()=>{});
+  }
+  setTimeout(()=>{ window.open('https://claude.ai/new','_blank'); }, 600);
+}
+
+function addChatMsg(text, role){
+  const container = document.getElementById('aiMessages');
+  const div = document.createElement('div');
+  div.className = `ai-msg ${role}`;
+  // Convert line breaks and simple markdown
+  div.innerHTML = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+// ─────────────────────────────────────────────────────────
+
+window.addEventListener('load',init);
+</script>
+
+<!-- Bottom Navigation (Mobile) -->
+<nav class="bottom-nav">
+  <button class="bnav-item active" id="bnav-home" onclick="goPage('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    ホーム<div class="bnav-dot"></div>
+  </button>
+  <button class="bnav-item" id="bnav-charts" onclick="goPage('charts')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    チャート<div class="bnav-dot"></div>
+  </button>
+  <button class="bnav-item" id="bnav-pos" onclick="goPage('pos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+    ポジション<div class="bnav-dot"></div>
+  </button>
+  <button class="bnav-item" id="bnav-ai" onclick="goPage('ai')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    AI相談<div class="bnav-dot"></div>
+  </button>
+</nav>
+
+</body>
+</html>
